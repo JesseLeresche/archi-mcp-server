@@ -1,0 +1,23 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Archi MCP Plugin
+Bundle-SymbolicName: com.archimatetool.mcp;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: com.archimatetool.mcp.Activator
+Bundle-RequiredExecutionEnvironment: JavaSE-21
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ com.archimatetool.model,
+ com.archimatetool.editor
+Bundle-ClassPath: .,
+ lib/jetty-server-11.0.20.jar,
+ lib/jetty-servlet-11.0.20.jar,
+ lib/jetty-util-11.0.20.jar,
+ lib/jetty-http-11.0.20.jar,
+ lib/jetty-io-11.0.20.jar,
+ lib/jakarta.servlet-api-5.0.0.jar,
+ lib/jackson-databind-2.18.2.jar,
+ lib/jackson-core-2.18.2.jar,
+ lib/jackson-annotations-2.18.2.jar
+Export-Package: com.archimatetool.mcp
+Bundle-ActivationPolicy: lazy

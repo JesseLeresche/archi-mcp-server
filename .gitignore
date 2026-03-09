@@ -1,0 +1,25 @@
+# Build output
+**/target/
+**/bin/
+
+# Bundled libs (downloaded by Maven)
+com.archimatetool.mcp/lib/
+
+# Eclipse IDE
+.metadata/
+*.launch
+.settings/
+.classpath
+.project
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
