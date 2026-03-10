@@ -59,6 +59,11 @@
                                     <version>${jetty.version}</version>
                                 </artifactItem>
                                 <artifactItem>
+                                    <groupId>org.eclipse.jetty</groupId>
+                                    <artifactId>jetty-security</artifactId>
+                                    <version>${jetty.version}</version>
+                                </artifactItem>
+                                <artifactItem>
                                     <groupId>jakarta.servlet</groupId>
                                     <artifactId>jakarta.servlet-api</artifactId>
                                     <version>${jakarta.servlet.version}</version>
@@ -78,6 +83,17 @@
                                     <groupId>com.fasterxml.jackson.core</groupId>
                                     <artifactId>jackson-annotations</artifactId>
                                     <version>${jackson.version}</version>
+                                </artifactItem>
+                                <!-- SLF4J (required by Jetty) -->
+                                <artifactItem>
+                                    <groupId>org.slf4j</groupId>
+                                    <artifactId>slf4j-api</artifactId>
+                                    <version>${slf4j.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.slf4j</groupId>
+                                    <artifactId>slf4j-simple</artifactId>
+                                    <version>${slf4j.version}</version>
                                 </artifactItem>
                             </artifactItems>
                             <outputDirectory>${project.basedir}/lib</outputDirectory>

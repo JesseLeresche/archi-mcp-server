@@ -1,18 +1,29 @@
 # Archi MCP Plugin
 
-An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implements the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) over HTTP. When installed, it starts an embedded Jetty HTTP server on `localhost:7432` that allows any MCP-compliant client to read and modify ArchiMate models.
+An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implements the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) over HTTP. When installed, it starts an embedded Jetty HTTP server on `localhost:7432` that allows any MCP-compliant client to read and modify ArchiMate models in real time.
+
+## Features
+
+- **Multi-model support** — list all open models and switch between them
+- **Query & filter** — search elements by type, layer, or name substring
+- **Full model authoring** — create elements, relationships, and diagram views
+- **Visual layout** — place elements on views and draw relationship connections
+- **Dual MCP transport** — SSE (for Claude Code / GitHub Copilot) and Streamable HTTP (for Copilot Studio)
+- **Zero external dependencies** — single JAR bundles Jetty 11 + Jackson; no sidecar process needed
 
 ## Supported MCP Clients
 
-- **Claude Code** (SSE transport)
-- **GitHub Copilot** in VS Code (SSE transport)
-- **Copilot Studio** (Streamable HTTP transport)
+| Client | Transport |
+|--------|-----------|
+| [Claude Code](https://claude.ai/code) | SSE (`GET /sse` + `POST /message`) |
+| GitHub Copilot (VS Code) | SSE |
+| Copilot Studio | Streamable HTTP (`POST /mcp`) |
 
 ## Prerequisites
 
 - **Archi 5.3.0+** installed locally
-- **JDK 21+** (for building)
-- **Maven 3.9+** (for building)
+- **JDK 21+** (for building only)
+- **Maven 3.9+** (for building only)
 
 ## Building
 
@@ -44,34 +55,36 @@ The `lib/` directory (Jetty 11 + Jackson JARs) is downloaded automatically by Ma
 
 ## Installation
 
-1. Copy the built JAR into Archi's `dropins` folder:
+1. Build the plugin JAR (see above).
+
+2. Copy the JAR into Archi's `plugins` folder:
 
    ```bash
    # macOS
    cp com.archimatetool.mcp/target/com.archimatetool.mcp-1.0.0-SNAPSHOT.jar \
-      /Applications/Archi.app/Contents/Eclipse/dropins/
+      /Applications/Archi.app/Contents/Eclipse/plugins/
 
    # Linux
    cp com.archimatetool.mcp/target/com.archimatetool.mcp-1.0.0-SNAPSHOT.jar \
-      /opt/Archi/dropins/
+      /opt/Archi/plugins/
 
    # Windows (PowerShell)
    Copy-Item com.archimatetool.mcp\target\com.archimatetool.mcp-1.0.0-SNAPSHOT.jar `
-      "C:\Program Files\Archi\dropins\"
+      "C:\Program Files\Archi\plugins\"
    ```
 
-2. Restart Archi. The plugin starts automatically and launches the MCP server.
+3. Restart Archi. The plugin starts automatically and launches the MCP server.
 
-3. Verify by opening a model in Archi, then:
+4. Verify by opening a model in Archi, then:
    ```bash
    curl http://localhost:7432/health
    ```
 
-## Connecting MCP Clients
+## Usage
 
 ### Claude Code
 
-Add to your MCP config (`~/.claude/claude_code_config.json` or project `.mcp.json`):
+Add to your project `.mcp.json` (or `~/.claude/claude_code_config.json` for global):
 
 ```json
 {
@@ -84,6 +97,8 @@ Add to your MCP config (`~/.claude/claude_code_config.json` or project `.mcp.jso
 }
 ```
 
+Then use Claude Code normally — it will discover the Archi tools and can query, create, and modify elements in your open model.
+
 ### GitHub Copilot (VS Code)
 
 Configure your Copilot MCP settings to point to `http://localhost:7432/sse` (SSE transport).
@@ -94,13 +109,32 @@ Use `POST http://localhost:7432/mcp` (single-endpoint Streamable HTTP transport)
 
 ## Available MCP Tools
 
+### Model Management
+
 | Tool | Description |
 |------|-------------|
-| `query_model` | List/filter elements by type, layer, or name |
+| `list_models` | List all open models in Archi with selection status |
+| `select_model` | Select which open model to use by name or ID |
+
+### Querying
+
+| Tool | Description |
+|------|-------------|
+| `query_model` | List/filter elements by ArchiMate type, layer, or name |
 | `get_views` | List diagram views with optional element details |
+
+### Authoring
+
+| Tool | Description |
+|------|-------------|
 | `create_element` | Create an ArchiMate element in the model |
 | `create_relationship` | Create a relationship between two elements |
 | `create_view` | Create an empty diagram view |
+
+### Visual Layout
+
+| Tool | Description |
+|------|-------------|
 | `add_element_to_view` | Place an element as a visual figure on a view |
 | `add_relationship_to_view` | Draw a visual connection for an existing relationship |
 
@@ -118,9 +152,11 @@ A model must be open in Archi for the tools to work.
 
 ## Configuration
 
-- **Default port**: `7432` (override with `-Darchi.mcp.port=<port>` JVM argument in Archi)
-- **Bind address**: `127.0.0.1` (localhost only, not configurable for security)
-- **MCP protocol version**: `2024-11-05`
+| Property | Default | Description |
+|----------|---------|-------------|
+| `archi.mcp.port` | `7432` | HTTP server port (set via `-Darchi.mcp.port=<port>` JVM arg) |
+| Bind address | `127.0.0.1` | Localhost only (not configurable, for security) |
+| MCP version | `2024-11-05` | Protocol version advertised to clients |
 
 ## License
 

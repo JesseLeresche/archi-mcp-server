@@ -25,12 +25,54 @@ import com.archimatetool.model.IFolder;
  */
 public class ModelAccessor {
 
+    private static volatile String selectedModelId;
+
     /**
-     * Returns the first open model from the Archi editor, or null if none is open.
+     * Returns all open models from the Archi editor.
+     */
+    public static List<IArchimateModel> getAllModels() {
+        return IEditorModelManager.INSTANCE.getModels();
+    }
+
+    /**
+     * Returns the currently selected model, or the first open model if none is selected.
+     * Returns null if no models are open.
      */
     public static IArchimateModel getOpenModel() {
         List<IArchimateModel> models = IEditorModelManager.INSTANCE.getModels();
-        return models.isEmpty() ? null : models.get(0);
+        if (models.isEmpty()) return null;
+
+        if (selectedModelId != null) {
+            for (IArchimateModel model : models) {
+                if (selectedModelId.equals(model.getId())) {
+                    return model;
+                }
+            }
+            // Selected model no longer open, clear selection
+            selectedModelId = null;
+        }
+        return models.get(0);
+    }
+
+    /**
+     * Select a model by name or ID. Returns the matched model, or null if not found.
+     */
+    public static IArchimateModel selectModel(String nameOrId) {
+        List<IArchimateModel> models = IEditorModelManager.INSTANCE.getModels();
+        for (IArchimateModel model : models) {
+            if (nameOrId.equals(model.getId()) || nameOrId.equalsIgnoreCase(model.getName())) {
+                selectedModelId = model.getId();
+                return model;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the ID of the currently selected model, or null if using default.
+     */
+    public static String getSelectedModelId() {
+        return selectedModelId;
     }
 
     /**

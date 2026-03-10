@@ -20,6 +20,8 @@ public class ToolRegistry {
     private final Map<String, ITool> tools = new LinkedHashMap<>();
 
     public ToolRegistry() {
+        register(new ListModelsTool());
+        register(new SelectModelTool());
         register(new QueryModelTool());
         register(new GetViewsTool());
         register(new CreateElementTool());
@@ -27,6 +29,9 @@ public class ToolRegistry {
         register(new CreateViewTool());
         register(new AddElementToViewTool());
         register(new AddRelationshipToViewTool());
+        register(new UpdateFigureAppearanceTool());
+        register(new UpdateElementTool());
+        register(new GetElementAnalysisTool());
     }
 
     private void register(ITool tool) {
