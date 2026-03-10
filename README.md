@@ -6,8 +6,11 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 - **Multi-model support** — list all open models and switch between them
 - **Query & filter** — search elements by type, layer, or name substring
+- **Element analysis** — inspect an element's relationships, view usage, and properties without scanning raw XML
 - **Full model authoring** — create elements, relationships, and diagram views
+- **Property management** — update element names, documentation, and custom key/value properties
 - **Visual layout** — place elements on views and draw relationship connections
+- **Appearance control** — change fill color, font color, line color, opacity, and line width on view figures
 - **Dual MCP transport** — SSE (for Claude Code / GitHub Copilot) and Streamable HTTP (for Copilot Studio)
 - **Zero external dependencies** — single JAR bundles Jetty 11 + Jackson; no sidecar process needed
 
@@ -131,12 +134,20 @@ Use `POST http://localhost:7432/mcp` (single-endpoint Streamable HTTP transport)
 | `create_relationship` | Create a relationship between two elements |
 | `create_view` | Create an empty diagram view |
 
-### Visual Layout
+### Visual Layout & Appearance
 
 | Tool | Description |
 |------|-------------|
 | `add_element_to_view` | Place an element as a visual figure on a view |
 | `add_relationship_to_view` | Draw a visual connection for an existing relationship |
+| `update_figure_appearance` | Update fill color, font color, line color, opacity, line width, or text alignment of a figure on a view |
+
+### Properties & Analysis
+
+| Tool | Description |
+|------|-------------|
+| `update_element` | Update an element's name, documentation, or custom key/value properties |
+| `get_element_analysis` | Analyze an element's incoming/outgoing relationships, view usage, and custom properties |
 
 A model must be open in Archi for the tools to work.
 
