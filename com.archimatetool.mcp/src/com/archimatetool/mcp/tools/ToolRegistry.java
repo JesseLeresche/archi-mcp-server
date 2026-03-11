@@ -32,6 +32,14 @@ public class ToolRegistry {
         register(new UpdateFigureAppearanceTool());
         register(new UpdateElementTool());
         register(new GetElementAnalysisTool());
+        register(new DeleteViewTool());
+        register(new DeleteElementTool());
+        register(new CreateFolderTool());
+        register(new BulkCreateElementsTool());
+        register(new BulkUpdateElementsTool());
+        register(new BulkCreateRelationshipsTool());
+        register(new BulkAddElementsToViewTool());
+        register(new BulkAddRelationshipsToViewTool());
     }
 
     private void register(ITool tool) {

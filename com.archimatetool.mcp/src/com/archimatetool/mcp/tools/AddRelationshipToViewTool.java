@@ -12,6 +12,7 @@ import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelBendpoint;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -58,6 +59,19 @@ public class AddRelationshipToViewTool implements ITool {
         targetFigureId.put("description",
                 "Optional: figure ID of the target element on the view. If omitted, the tool finds it automatically.");
 
+        ObjectNode bendpoints = properties.putObject("bendpoints");
+        bendpoints.put("type", "array");
+        bendpoints.put("description",
+                "Optional list of bendpoints for right-angle or multi-segment routing. "
+                        + "Each bendpoint specifies offsets from the source and target figure centres.");
+        ObjectNode bpItems = bendpoints.putObject("items");
+        bpItems.put("type", "object");
+        ObjectNode bpProps = bpItems.putObject("properties");
+        bpProps.putObject("startX").put("type", "integer");
+        bpProps.putObject("startY").put("type", "integer");
+        bpProps.putObject("endX").put("type", "integer");
+        bpProps.putObject("endY").put("type", "integer");
+
         ArrayNode required = schema.putArray("required");
         required.add("view_id");
         required.add("relationship_id");
@@ -77,6 +91,7 @@ public class AddRelationshipToViewTool implements ITool {
         String relationshipId = args.get("relationship_id").asText();
         String sourceFigureId = args.has("source_figure_id") ? args.get("source_figure_id").asText() : null;
         String targetFigureId = args.has("target_figure_id") ? args.get("target_figure_id").asText() : null;
+        JsonNode bendpointsNode = args.has("bendpoints") ? args.get("bendpoints") : null;
 
         // Step 2: Find view
         IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
@@ -138,6 +153,19 @@ public class AddRelationshipToViewTool implements ITool {
                     IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
             connection.setArchimateRelationship(relationship);
             connection.connect(sourceFigure, targetFigure);
+
+            if (bendpointsNode != null && bendpointsNode.isArray()) {
+                for (JsonNode bp : bendpointsNode) {
+                    IDiagramModelBendpoint bendpoint =
+                            IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
+                    bendpoint.setStartX(bp.path("startX").asInt(0));
+                    bendpoint.setStartY(bp.path("startY").asInt(0));
+                    bendpoint.setEndX(bp.path("endX").asInt(0));
+                    bendpoint.setEndY(bp.path("endY").asInt(0));
+                    connection.getBendpoints().add(bendpoint);
+                }
+            }
+
             IEditorModelManager.INSTANCE.saveModel(model);
 
             // Step 8: Return result
@@ -147,6 +175,7 @@ public class AddRelationshipToViewTool implements ITool {
             entry.put("relationship_id", relationshipId);
             entry.put("source_figure_id", sourceFigure.getId());
             entry.put("target_figure_id", targetFigure.getId());
+            entry.put("bendpoint_count", connection.getBendpoints().size());
             entry.put("already_exists", false);
             entry.put("success", true);
             return entry;

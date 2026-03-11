@@ -193,6 +193,43 @@ public class ModelAccessor {
     }
 
     /**
+     * Returns all diagram views in the model, searching recursively through all folders.
+     */
+    public static List<IArchimateDiagramModel> getAllViews(IArchimateModel model) {
+        return collectAllFromFolders(model, IArchimateDiagramModel.class);
+    }
+
+    /**
+     * Find a folder by its ID, searching recursively through all root folders.
+     * Returns null if not found.
+     */
+    public static IFolder findFolderById(IArchimateModel model, String id) {
+        for (IFolder folder : model.getFolders()) {
+            IFolder result = searchFolderById(folder, id);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    private static IFolder searchFolderById(IFolder folder, String id) {
+        if (id.equals(folder.getId())) return folder;
+        for (IFolder sub : folder.getFolders()) {
+            IFolder result = searchFolderById(sub, id);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the root Views folder (the default folder for diagram models).
+     */
+    public static IFolder getViewsFolder(IArchimateModel model) {
+        com.archimatetool.model.IArchimateDiagramModel probe =
+                com.archimatetool.model.IArchimateFactory.eINSTANCE.createArchimateDiagramModel();
+        return model.getDefaultFolderForObject(probe);
+    }
+
+    /**
      * Resolve an ArchiMate element EClass by type name (case-insensitive).
      * Returns null if no matching element type is found.
      */
