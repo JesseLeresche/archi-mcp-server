@@ -40,6 +40,8 @@ public class ToolRegistry {
         register(new BulkCreateRelationshipsTool());
         register(new BulkAddElementsToViewTool());
         register(new BulkAddRelationshipsToViewTool());
+        register(new MoveElementToFolderTool());
+        register(new BulkMoveElementsToFolderTool());
     }
 
     private void register(ITool tool) {
