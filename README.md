@@ -15,8 +15,10 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Visual layout** — place elements on views, draw connections, set positions and sizes
 - **Appearance control** — change fill color, font color, line color, opacity, and line width
 - **Property management** — update names, documentation, and custom key/value properties
-- **Folder management** — create folders and move elements between folders
-- **Bulk operations** — create, update, or move multiple elements in a single call
+- **Folder management** — create folders and move elements and views between folders
+- **View layout** — query figure positions and sizes on any view
+- **Connection management** — update or delete visual connections on views
+- **Bulk operations** — create, update, or move multiple elements or views in a single call
 - **Element analysis** — inspect an element's relationships and view usage
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
@@ -42,23 +44,23 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 ### Option A — Use the pre-built release (recommended)
 
-1. Download the latest JAR from the [Releases page](https://github.com/JesseLeresche/archi-mcp/releases).
+1. Download the latest JAR from the [Releases page](https://github.com/JesseLeresche/archi-mcp-server/releases).
 
 2. Copy it into Archi's `plugins/` directory:
 
    **macOS**
    ```bash
-   cp com.archimatetool.mcp-*.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-*.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp com.archimatetool.mcp-*.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-*.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item com.archimatetool.mcp-*.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-*.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -150,6 +152,14 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `add_element_to_view` | Place an element as a figure on a view |
 | `add_relationship_to_view` | Draw a visual connection for a relationship |
 | `update_figure_appearance` | Set fill color, font color, line color, opacity, or line width |
+| `get_view_layout` | Return position and size (x, y, width, height) of all figures on a view |
+
+### Connections
+
+| Tool | Description |
+|------|-------------|
+| `update_connection` | Update bendpoints, line color, line width, font color, or text position on a connection |
+| `delete_connection` | Remove a visual connection from a view (logical relationship is preserved) |
 
 ### Properties & Analysis
 
@@ -163,6 +173,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `move_element_to_folder` | Move an element to a different folder |
+| `move_view_to_folder` | Move a diagram view to a different folder |
 
 ### Deletion
 
@@ -181,6 +192,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `bulk_add_elements_to_view` | Place multiple elements on a view |
 | `bulk_add_relationships_to_view` | Draw multiple connections on a view |
 | `bulk_move_elements_to_folder` | Move multiple elements to folders |
+| `bulk_move_views_to_folder` | Move multiple views to folders |
 
 ---
 
@@ -244,7 +256,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-com.archimatetool.mcp/target/com.archimatetool.mcp-1.0.0-SNAPSHOT.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.0.0-SNAPSHOT.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
