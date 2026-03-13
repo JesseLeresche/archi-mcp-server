@@ -1,9 +1,14 @@
 # Archi MCP Plugin
 
+> **Status: Early Testing** — This plugin has been tested with Claude Code and GitHub Copilot in VS Code on macOS and Windows. It is functional but may have rough edges. Feedback, bug reports, and feature requests are very welcome — please open a [GitHub Issue](https://github.com/JesseLeresche/archi-mcp-server/issues).
+
 An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implements the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) over HTTP. Once installed, it starts an embedded MCP server on `localhost:7432` that lets any MCP-compliant AI assistant read and modify your open ArchiMate models in real time.
+
+**No additional software required.** Unlike many MCP servers that require Node.js, Python, or a separate process to be running, this plugin is a single JAR that installs directly into Archi. Drop it in the `plugins/` folder, restart Archi, and it's ready — nothing else to install or configure.
 
 ## Features
 
+- **No extra dependencies** — single JAR bundles everything (Jetty 11 + Jackson); no Node.js, Python, or sidecar process needed
 - **Multi-model support** — list all open models and switch between them
 - **Query & filter** — search elements by type, layer, or name
 - **Full model authoring** — create elements, relationships, views, and folders
@@ -14,7 +19,14 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Bulk operations** — create, update, or move multiple elements in a single call
 - **Element analysis** — inspect an element's relationships and view usage
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
-- **Zero external dependencies** — single JAR bundles Jetty 11 + Jackson; no sidecar process needed
+
+## Tested With
+
+| Client | Platform | Status |
+|--------|----------|--------|
+| [Claude Code](https://claude.ai/code) | macOS, Windows | Tested |
+| GitHub Copilot (VS Code) | macOS, Windows | Tested |
+| Copilot Studio | — | Untested — feedback welcome |
 
 ## Supported Clients
 
