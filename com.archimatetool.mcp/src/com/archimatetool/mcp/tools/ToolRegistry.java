@@ -46,6 +46,7 @@ public class ToolRegistry {
         register(new BulkMoveViewsToFolderTool());
         register(new DeleteConnectionTool());
         register(new UpdateConnectionTool());
+        register(new GetViewLayoutTool());
     }
 
     private void register(ITool tool) {
