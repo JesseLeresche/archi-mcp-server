@@ -193,6 +193,26 @@ public class ModelAccessor {
     }
 
     /**
+     * Find a visual connection on a view by its own connection ID.
+     * Checks source connections on all figures.
+     * Returns null if not found.
+     */
+    public static IDiagramModelArchimateConnection findConnectionById(
+            IArchimateDiagramModel view, String connectionId) {
+        for (var child : view.getChildren()) {
+            if (child instanceof IDiagramModelArchimateObject figure) {
+                for (var conn : figure.getSourceConnections()) {
+                    if (conn instanceof IDiagramModelArchimateConnection c
+                            && connectionId.equals(c.getId())) {
+                        return c;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns all diagram views in the model, searching recursively through all folders.
      */
     public static List<IArchimateDiagramModel> getAllViews(IArchimateModel model) {
