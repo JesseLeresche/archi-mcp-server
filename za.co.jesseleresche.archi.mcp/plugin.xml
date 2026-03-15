@@ -2,6 +2,6 @@
 <?eclipse version="3.4"?>
 <plugin>
   <extension point="org.eclipse.ui.startup">
-    <startup class="com.archimatetool.mcp.Activator"/>
+    <startup class="za.co.jesseleresche.archi.mcp.Activator"/>
   </extension>
 </plugin>
