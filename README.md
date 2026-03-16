@@ -11,14 +11,19 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **No extra dependencies** — single JAR bundles everything (Jetty 11 + Jackson); no Node.js, Python, or sidecar process needed
 - **Multi-model support** — list all open models and switch between them
 - **Query & filter** — search elements by type, layer, or name
-- **Full model authoring** — create elements, relationships, views, and folders
+- **Full model authoring** — create elements, relationships, views, and folders with optional folder placement
+- **Type change** — change an element's ArchiMate type while preserving all relationships and view references
 - **Visual layout** — place elements on views, draw connections, set positions and sizes
 - **Appearance control** — change fill color, font color, line color, opacity, and line width
 - **Property management** — update names, documentation, and custom key/value properties
-- **Folder management** — create folders and move elements and views between folders
+- **Folder browsing** — get folder tree hierarchy, list folder contents (elements, relationships, views)
+- **Folder management** — create folders and move elements, relationships, and views between folders
+- **View management** — duplicate views with all figures and connections, remove figures from views
 - **View layout** — query figure positions and sizes on any view
+- **Connection inspection** — get connection details including bendpoints, colors, and line width
 - **Connection management** — update or delete visual connections on views
-- **Bulk operations** — create, update, or move multiple elements or views in a single call
+- **Access relationship support** — set access type (Read, Write, ReadWrite) on access relationships
+- **Bulk operations** — create, update, or move multiple elements, relationships, or views in a single call
 - **Element analysis** — inspect an element's relationships and view usage
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
@@ -133,15 +138,15 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 
 | Tool | Description |
 |------|-------------|
-| `query_model` | Filter elements by ArchiMate type, layer, or name |
+| `query_model` | Filter elements by ArchiMate type, layer, name, or folder |
 | `get_views` | List diagram views with optional element details |
 
 ### Authoring
 
 | Tool | Description |
 |------|-------------|
-| `create_element` | Create an ArchiMate element |
-| `create_relationship` | Create a relationship between two elements |
+| `create_element` | Create an ArchiMate element (optionally in a specific folder) |
+| `create_relationship` | Create a relationship between two elements (with optional access type and folder) |
 | `create_view` | Create an empty diagram view |
 | `create_folder` | Create a folder or subfolder |
 
@@ -153,11 +158,14 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `add_relationship_to_view` | Draw a visual connection for a relationship |
 | `update_figure_appearance` | Set fill color, font color, line color, opacity, or line width |
 | `get_view_layout` | Return position and size (x, y, width, height) of all figures on a view |
+| `remove_figure_from_view` | Remove a visual figure from a view without deleting the element |
+| `duplicate_view` | Clone an existing view with all figures, connections, and appearance settings |
 
 ### Connections
 
 | Tool | Description |
 |------|-------------|
+| `get_connection` | Get visual properties of a connection (bendpoints, colors, line width) |
 | `update_connection` | Update bendpoints, line color, line width, font color, or text position on a connection |
 | `delete_connection` | Remove a visual connection from a view (logical relationship is preserved) |
 
@@ -165,13 +173,15 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 
 | Tool | Description |
 |------|-------------|
-| `update_element` | Update name, documentation, or custom properties |
+| `update_element` | Update name, documentation, custom properties, or ArchiMate type |
 | `get_element_analysis` | Inspect relationships, view usage, and properties |
 
 ### Folders
 
 | Tool | Description |
 |------|-------------|
+| `get_folder_tree` | Get the complete folder hierarchy (optionally filtered by section) |
+| `list_folder_contents` | List elements, relationships, views, and subfolders in a folder |
 | `move_element_to_folder` | Move an element to a different folder |
 | `move_view_to_folder` | Move a diagram view to a different folder |
 
@@ -186,12 +196,12 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 
 | Tool | Description |
 |------|-------------|
-| `bulk_create_elements` | Create multiple elements in one call |
+| `bulk_create_elements` | Create multiple elements in one call (with optional per-item folder) |
 | `bulk_update_elements` | Update multiple elements in one call |
-| `bulk_create_relationships` | Create multiple relationships in one call |
+| `bulk_create_relationships` | Create multiple relationships in one call (with optional access type and folder) |
 | `bulk_add_elements_to_view` | Place multiple elements on a view |
 | `bulk_add_relationships_to_view` | Draw multiple connections on a view |
-| `bulk_move_elements_to_folder` | Move multiple elements to folders |
+| `bulk_move_elements_to_folder` | Move multiple elements or relationships to folders |
 | `bulk_move_views_to_folder` | Move multiple views to folders |
 
 ---

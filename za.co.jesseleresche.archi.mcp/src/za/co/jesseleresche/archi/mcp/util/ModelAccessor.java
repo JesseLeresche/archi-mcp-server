@@ -118,6 +118,42 @@ public class ModelAccessor {
     }
 
     /**
+     * Collect all objects of a given type from a specific folder (and subfolders).
+     */
+    public static <T> List<T> collectFromFolder(IFolder folder, Class<T> type) {
+        List<T> results = new ArrayList<>();
+        collectFromFolder(folder, type, results);
+        return results;
+    }
+
+    /**
+     * Find all figures on a view (recursively through nested containers)
+     * whose archimateElement has the given element ID.
+     */
+    @SuppressWarnings("unchecked")
+    public static List<IDiagramModelArchimateObject> findAllFiguresByElementId(
+            IArchimateDiagramModel view, String elementId) {
+        List<IDiagramModelArchimateObject> results = new ArrayList<>();
+        collectFiguresByElementId(view.getChildren(), elementId, results);
+        return results;
+    }
+
+    private static void collectFiguresByElementId(
+            java.util.List<? extends org.eclipse.emf.ecore.EObject> children,
+            String elementId,
+            List<IDiagramModelArchimateObject> results) {
+        for (var child : children) {
+            if (child instanceof IDiagramModelArchimateObject dmo
+                    && elementId.equals(dmo.getArchimateElement().getId())) {
+                results.add(dmo);
+            }
+            if (child instanceof com.archimatetool.model.IDiagramModelContainer container) {
+                collectFiguresByElementId(container.getChildren(), elementId, results);
+            }
+        }
+    }
+
+    /**
      * Find a diagram view by its ID, searching recursively through all folders.
      */
     public static IArchimateDiagramModel findViewById(IArchimateModel model, String id) {

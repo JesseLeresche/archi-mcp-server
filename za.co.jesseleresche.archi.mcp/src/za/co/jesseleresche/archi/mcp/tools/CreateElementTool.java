@@ -12,12 +12,14 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
+import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Creates a new ArchiMate element and adds it to the model's default folder for that type.
+ * Creates a new ArchiMate element and adds it to the model's default folder for that type,
+ * or to a specified folder if folder_id is provided.
  */
 public class CreateElementTool implements ITool {
 
@@ -28,7 +30,8 @@ public class CreateElementTool implements ITool {
 
     @Override
     public String getDescription() {
-        return "Create a new ArchiMate element in the open model.";
+        return "Create a new ArchiMate element in the open model. "
+                + "Optionally specify a folder_id to place it in a specific folder instead of the default.";
     }
 
     @Override
@@ -50,6 +53,12 @@ public class CreateElementTool implements ITool {
         documentation.put("type", "string");
         documentation.put("description", "Optional documentation");
 
+        ObjectNode folderId = properties.putObject("folder_id");
+        folderId.put("type", "string");
+        folderId.put("description",
+                "Optional: ID of the folder to place the element in. "
+                        + "If omitted, the element is placed in the default layer folder for its type.");
+
         ArrayNode required = schema.putArray("required");
         required.add("name");
         required.add("type");
@@ -67,10 +76,21 @@ public class CreateElementTool implements ITool {
         String name = args.get("name").asText();
         String typeName = args.get("type").asText();
         String documentation = args.has("documentation") ? args.get("documentation").asText() : null;
+        String folderId = args.has("folder_id") ? args.get("folder_id").asText() : null;
 
         EClass eClass = ModelAccessor.resolveElementClass(typeName);
         if (eClass == null) {
             throw new Exception("Unknown ArchiMate element type: " + typeName);
+        }
+
+        IFolder targetFolder;
+        if (folderId != null) {
+            targetFolder = ModelAccessor.findFolderById(model, folderId);
+            if (targetFolder == null) {
+                throw new Exception("Folder not found: " + folderId);
+            }
+        } else {
+            targetFolder = null;
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
@@ -81,13 +101,17 @@ public class CreateElementTool implements ITool {
                 element.setDocumentation(documentation);
             }
 
-            model.getDefaultFolderForObject(element).getElements().add(element);
+            IFolder folder = targetFolder != null
+                    ? targetFolder
+                    : model.getDefaultFolderForObject(element);
+            folder.getElements().add(element);
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", element.getId());
             entry.put("name", element.getName());
             entry.put("type", element.eClass().getName());
+            entry.put("folder_id", folder.getId());
             entry.put("success", true);
             return entry;
         });

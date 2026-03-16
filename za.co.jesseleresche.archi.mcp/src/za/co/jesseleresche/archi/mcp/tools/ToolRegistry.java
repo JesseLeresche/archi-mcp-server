@@ -47,6 +47,11 @@ public class ToolRegistry {
         register(new DeleteConnectionTool());
         register(new UpdateConnectionTool());
         register(new GetViewLayoutTool());
+        register(new RemoveFigureFromViewTool());
+        register(new ListFolderContentsTool());
+        register(new GetFolderTreeTool());
+        register(new GetConnectionTool());
+        register(new DuplicateViewTool());
     }
 
     private void register(ITool tool) {

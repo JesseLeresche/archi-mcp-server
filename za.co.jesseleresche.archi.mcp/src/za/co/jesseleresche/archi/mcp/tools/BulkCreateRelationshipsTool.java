@@ -11,10 +11,12 @@ import org.eclipse.emf.ecore.EObject;
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
+import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
+import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -32,7 +34,8 @@ public class BulkCreateRelationshipsTool implements ITool {
     @Override
     public String getDescription() {
         return "Create multiple ArchiMate relationships in a single call. "
-                + "Returns a result entry per relationship, with per-item success or error.";
+                + "Returns a result entry per relationship, with per-item success or error. "
+                + "Each item may optionally specify folder_id and access_type.";
     }
 
     @Override
@@ -52,6 +55,10 @@ public class BulkCreateRelationshipsTool implements ITool {
         itemProps.putObject("target_id").put("type", "string");
         itemProps.putObject("type").put("type", "string");
         itemProps.putObject("name").put("type", "string");
+        itemProps.putObject("folder_id").put("type", "string");
+        ObjectNode accessTypeNode = itemProps.putObject("access_type");
+        accessTypeNode.put("type", "integer");
+        accessTypeNode.put("description", "For AccessRelationship: 0=Unspecified, 1=Read, 2=Write, 3=ReadWrite");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("source_id");
         itemRequired.add("target_id");
@@ -85,6 +92,8 @@ public class BulkCreateRelationshipsTool implements ITool {
                     String targetId = item.get("target_id").asText();
                     String typeName = item.get("type").asText();
                     String name = item.has("name") ? item.get("name").asText() : null;
+                    String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
+                    Integer accessTypeVal = item.has("access_type") ? item.get("access_type").asInt() : null;
 
                     IArchimateElement source = ModelAccessor.findElementById(model, sourceId);
                     if (source == null) {
@@ -119,12 +128,32 @@ public class BulkCreateRelationshipsTool implements ITool {
                     if (name != null) {
                         relationship.setName(name);
                     }
-                    model.getDefaultFolderForObject(relationship).getElements().add(relationship);
+                    if (accessTypeVal != null && relationship instanceof IAccessRelationship accessRel) {
+                        accessRel.setAccessType(accessTypeVal);
+                    }
+
+                    IFolder folder;
+                    if (folderId != null) {
+                        folder = ModelAccessor.findFolderById(model, folderId);
+                        if (folder == null) {
+                            entry.put("success", false);
+                            entry.put("error", "Folder not found: " + folderId);
+                            entries.add(entry);
+                            continue;
+                        }
+                    } else {
+                        folder = model.getDefaultFolderForObject(relationship);
+                    }
+                    folder.getElements().add(relationship);
 
                     entry.put("id", relationship.getId());
                     entry.put("source_id", sourceId);
                     entry.put("target_id", targetId);
                     entry.put("type", relationship.eClass().getName());
+                    entry.put("folder_id", folder.getId());
+                    if (relationship instanceof IAccessRelationship accessRel) {
+                        entry.put("access_type", accessRel.getAccessType());
+                    }
                     entry.put("success", true);
                 } catch (Exception e) {
                     entry.put("success", false);

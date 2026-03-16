@@ -14,6 +14,7 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
+import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -31,7 +32,8 @@ public class BulkCreateElementsTool implements ITool {
     @Override
     public String getDescription() {
         return "Create multiple ArchiMate elements in a single call. "
-                + "Returns a result entry per element, with per-item success or error.";
+                + "Returns a result entry per element, with per-item success or error. "
+                + "Each item may optionally specify a folder_id.";
     }
 
     @Override
@@ -50,6 +52,8 @@ public class BulkCreateElementsTool implements ITool {
         itemProps.putObject("name").put("type", "string");
         itemProps.putObject("type").put("type", "string");
         itemProps.putObject("documentation").put("type", "string");
+        itemProps.putObject("folder_id").put("type", "string")
+                .put("description", "Optional folder ID for this element");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("name");
         itemRequired.add("type");
@@ -81,6 +85,7 @@ public class BulkCreateElementsTool implements ITool {
                     String name = item.get("name").asText();
                     String typeName = item.get("type").asText();
                     String documentation = item.has("documentation") ? item.get("documentation").asText() : null;
+                    String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
 
                     EClass eClass = ModelAccessor.resolveElementClass(typeName);
                     if (eClass == null) {
@@ -98,11 +103,27 @@ public class BulkCreateElementsTool implements ITool {
                     if (documentation != null) {
                         element.setDocumentation(documentation);
                     }
-                    model.getDefaultFolderForObject(element).getElements().add(element);
+
+                    IFolder folder;
+                    if (folderId != null) {
+                        folder = ModelAccessor.findFolderById(model, folderId);
+                        if (folder == null) {
+                            entry.put("name", name);
+                            entry.put("type", typeName);
+                            entry.put("success", false);
+                            entry.put("error", "Folder not found: " + folderId);
+                            entries.add(entry);
+                            continue;
+                        }
+                    } else {
+                        folder = model.getDefaultFolderForObject(element);
+                    }
+                    folder.getElements().add(element);
 
                     entry.put("id", element.getId());
                     entry.put("name", element.getName());
                     entry.put("type", element.eClass().getName());
+                    entry.put("folder_id", folder.getId());
                     entry.put("success", true);
                 } catch (Exception e) {
                     entry.put("success", false);

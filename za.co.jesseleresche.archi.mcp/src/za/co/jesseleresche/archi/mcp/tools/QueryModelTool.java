@@ -10,6 +10,7 @@ import com.archimatetool.model.IApplicationElement;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IBusinessElement;
+import com.archimatetool.model.IFolder;
 import com.archimatetool.model.IImplementationMigrationElement;
 import com.archimatetool.model.IMotivationElement;
 import com.archimatetool.model.ITechnologyElement;
@@ -18,7 +19,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Lists all elements in the open model with optional filtering by type, layer, or name.
+ * Lists all elements in the open model with optional filtering by type, layer, name, or folder.
  */
 public class QueryModelTool implements ITool {
 
@@ -29,7 +30,8 @@ public class QueryModelTool implements ITool {
 
     @Override
     public String getDescription() {
-        return "List all elements in the open model. Optionally filter by ArchiMate type, layer, or name substring.";
+        return "List all elements in the open model. Optionally filter by ArchiMate type, "
+                + "layer, name substring, or folder ID.";
     }
 
     @Override
@@ -57,6 +59,19 @@ public class QueryModelTool implements ITool {
         nameSearch.put("type", "string");
         nameSearch.put("description", "Case-insensitive partial name match");
 
+        ObjectNode folderId = properties.putObject("folder_id");
+        folderId.put("type", "string");
+        folderId.put("description",
+                "Optional: only return elements within this folder (and subfolders by default). "
+                        + "Use include_subfolders=false to restrict to direct children only.");
+
+        ObjectNode includeSubfolders = properties.putObject("include_subfolders");
+        includeSubfolders.put("type", "boolean");
+        includeSubfolders.put("default", true);
+        includeSubfolders.put("description",
+                "When folder_id is set: if true (default), include elements in all subfolders; "
+                        + "if false, include only elements directly in that folder.");
+
         return schema;
     }
 
@@ -73,10 +88,33 @@ public class QueryModelTool implements ITool {
                 ? args.get("layer_filter").asText() : null;
         String nameSearch = args != null && args.has("name_search")
                 ? args.get("name_search").asText().toLowerCase() : null;
+        String folderId = args != null && args.has("folder_id")
+                ? args.get("folder_id").asText() : null;
+        boolean includeSubfolders = args == null || !args.has("include_subfolders")
+                || args.get("include_subfolders").asBoolean(true);
+
+        List<IArchimateElement> candidates;
+
+        if (folderId != null) {
+            IFolder folder = ModelAccessor.findFolderById(model, folderId);
+            if (folder == null) {
+                throw new Exception("Folder not found: " + folderId);
+            }
+            if (includeSubfolders) {
+                candidates = ModelAccessor.collectFromFolder(folder, IArchimateElement.class);
+            } else {
+                candidates = new ArrayList<>();
+                for (var obj : folder.getElements()) {
+                    if (obj instanceof IArchimateElement e) candidates.add(e);
+                }
+            }
+        } else {
+            candidates = ModelAccessor.collectAllFromFolders(model, IArchimateElement.class);
+        }
 
         List<Map<String, String>> results = new ArrayList<>();
 
-        for (IArchimateElement element : ModelAccessor.collectAllFromFolders(model, IArchimateElement.class)) {
+        for (IArchimateElement element : candidates) {
             String layer = detectLayer(element);
             String type = element.eClass().getName();
 
