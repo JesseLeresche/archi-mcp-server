@@ -127,30 +127,38 @@ public class ModelAccessor {
     }
 
     /**
-     * Find all figures on a view (recursively through nested containers)
-     * whose archimateElement has the given element ID.
+     * Collect all IDiagramModelArchimateObject figures on a view,
+     * recursing into nested containers.
      */
-    @SuppressWarnings("unchecked")
-    public static List<IDiagramModelArchimateObject> findAllFiguresByElementId(
-            IArchimateDiagramModel view, String elementId) {
+    public static List<IDiagramModelArchimateObject> collectAllFigures(
+            IArchimateDiagramModel view) {
         List<IDiagramModelArchimateObject> results = new ArrayList<>();
-        collectFiguresByElementId(view.getChildren(), elementId, results);
+        collectFiguresRecursive(view.getChildren(), results);
         return results;
     }
 
-    private static void collectFiguresByElementId(
+    private static void collectFiguresRecursive(
             java.util.List<? extends org.eclipse.emf.ecore.EObject> children,
-            String elementId,
             List<IDiagramModelArchimateObject> results) {
         for (var child : children) {
-            if (child instanceof IDiagramModelArchimateObject dmo
-                    && elementId.equals(dmo.getArchimateElement().getId())) {
+            if (child instanceof IDiagramModelArchimateObject dmo) {
                 results.add(dmo);
             }
             if (child instanceof com.archimatetool.model.IDiagramModelContainer container) {
-                collectFiguresByElementId(container.getChildren(), elementId, results);
+                collectFiguresRecursive(container.getChildren(), results);
             }
         }
+    }
+
+    /**
+     * Find all figures on a view (recursively through nested containers)
+     * whose archimateElement has the given element ID.
+     */
+    public static List<IDiagramModelArchimateObject> findAllFiguresByElementId(
+            IArchimateDiagramModel view, String elementId) {
+        return collectAllFigures(view).stream()
+                .filter(dmo -> elementId.equals(dmo.getArchimateElement().getId()))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -184,44 +192,38 @@ public class ModelAccessor {
 
     /**
      * Find a diagram figure (IDiagramModelArchimateObject) on a view by its figure ID.
-     * Searches top-level children only -- does not recurse into nested containers.
+     * Searches recursively through nested containers.
      */
     public static IDiagramModelArchimateObject findFigureById(
             IArchimateDiagramModel view, String figureId) {
-        return view.getChildren().stream()
-                .filter(c -> c instanceof IDiagramModelArchimateObject
-                        && figureId.equals(c.getId()))
-                .map(c -> (IDiagramModelArchimateObject) c)
+        return collectAllFigures(view).stream()
+                .filter(dmo -> figureId.equals(dmo.getId()))
                 .findFirst().orElse(null);
     }
 
     /**
-     * Find the figure on a view whose archimateElement has the given element ID.
-     * Searches top-level children only.
+     * Find the first figure on a view whose archimateElement has the given element ID.
+     * Searches recursively through nested containers.
      */
     public static IDiagramModelArchimateObject findFigureByElementId(
             IArchimateDiagramModel view, String elementId) {
-        return view.getChildren().stream()
-                .filter(c -> c instanceof IDiagramModelArchimateObject dmo
-                        && elementId.equals(dmo.getArchimateElement().getId()))
-                .map(c -> (IDiagramModelArchimateObject) c)
+        return collectAllFigures(view).stream()
+                .filter(dmo -> elementId.equals(dmo.getArchimateElement().getId()))
                 .findFirst().orElse(null);
     }
 
     /**
      * Find an existing visual connection on a view for a given relationship ID.
-     * Checks connections attached to each figure's source connections.
+     * Searches recursively through nested containers.
      * Returns null if no connection exists for this relationship.
      */
     public static IDiagramModelArchimateConnection findConnectionByRelationshipId(
             IArchimateDiagramModel view, String relationshipId) {
-        for (var child : view.getChildren()) {
-            if (child instanceof IDiagramModelArchimateObject figure) {
-                for (var conn : figure.getSourceConnections()) {
-                    if (conn instanceof IDiagramModelArchimateConnection c
-                            && relationshipId.equals(c.getArchimateRelationship().getId())) {
-                        return c;
-                    }
+        for (var figure : collectAllFigures(view)) {
+            for (var conn : figure.getSourceConnections()) {
+                if (conn instanceof IDiagramModelArchimateConnection c
+                        && relationshipId.equals(c.getArchimateRelationship().getId())) {
+                    return c;
                 }
             }
         }
@@ -230,18 +232,16 @@ public class ModelAccessor {
 
     /**
      * Find a visual connection on a view by its own connection ID.
-     * Checks source connections on all figures.
+     * Searches recursively through nested containers.
      * Returns null if not found.
      */
     public static IDiagramModelArchimateConnection findConnectionById(
             IArchimateDiagramModel view, String connectionId) {
-        for (var child : view.getChildren()) {
-            if (child instanceof IDiagramModelArchimateObject figure) {
-                for (var conn : figure.getSourceConnections()) {
-                    if (conn instanceof IDiagramModelArchimateConnection c
-                            && connectionId.equals(c.getId())) {
-                        return c;
-                    }
+        for (var figure : collectAllFigures(view)) {
+            for (var conn : figure.getSourceConnections()) {
+                if (conn instanceof IDiagramModelArchimateConnection c
+                        && connectionId.equals(c.getId())) {
+                    return c;
                 }
             }
         }

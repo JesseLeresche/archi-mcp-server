@@ -16,6 +16,7 @@ import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelBendpoint;
+import com.archimatetool.model.IDiagramModelContainer;
 import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -103,67 +104,42 @@ public class DuplicateViewTool implements ITool {
 
             resolvedFolder.getElements().add(newView);
 
-            // Pass 1: copy figures, build old-id → new-figure map
+            // Pass 1: recursively copy figures, preserving nesting hierarchy
             Map<String, IDiagramModelArchimateObject> figureMap = new HashMap<>();
-            for (var child : sourceView.getChildren()) {
-                if (child instanceof IDiagramModelArchimateObject oldFig) {
-                    IDiagramModelArchimateObject newFig =
-                            IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
-                    newFig.setArchimateElement(oldFig.getArchimateElement());
+            copyFigures(sourceView, newView, figureMap);
 
-                    IBounds oldBounds = oldFig.getBounds();
-                    IBounds newBounds = IArchimateFactory.eINSTANCE.createBounds();
-                    newBounds.setX(oldBounds.getX());
-                    newBounds.setY(oldBounds.getY());
-                    newBounds.setWidth(oldBounds.getWidth());
-                    newBounds.setHeight(oldBounds.getHeight());
-                    newFig.setBounds(newBounds);
-
-                    if (oldFig.getFillColor() != null) newFig.setFillColor(oldFig.getFillColor());
-                    if (oldFig.getLineColor() != null) newFig.setLineColor(oldFig.getLineColor());
-                    if (oldFig.getFontColor() != null) newFig.setFontColor(oldFig.getFontColor());
-                    newFig.setAlpha(oldFig.getAlpha());
-                    newFig.setTextAlignment(oldFig.getTextAlignment());
-
-                    newView.getChildren().add(newFig);
-                    figureMap.put(oldFig.getId(), newFig);
-                }
-            }
-
-            // Pass 2: copy connections using the figure map
+            // Pass 2: copy connections using the figure map (across all depth levels)
             int connectionCount = 0;
-            for (var child : sourceView.getChildren()) {
-                if (child instanceof IDiagramModelArchimateObject oldFig) {
-                    for (var conn : oldFig.getSourceConnections()) {
-                        if (conn instanceof IDiagramModelArchimateConnection oldConn) {
-                            IDiagramModelArchimateObject newSourceFig = figureMap.get(oldFig.getId());
-                            String targetId = oldConn.getTarget() != null ? oldConn.getTarget().getId() : null;
-                            IDiagramModelArchimateObject newTargetFig =
-                                    targetId != null ? figureMap.get(targetId) : null;
+            for (var oldFig : ModelAccessor.collectAllFigures(sourceView)) {
+                for (var conn : oldFig.getSourceConnections()) {
+                    if (conn instanceof IDiagramModelArchimateConnection oldConn) {
+                        IDiagramModelArchimateObject newSourceFig = figureMap.get(oldFig.getId());
+                        String targetId = oldConn.getTarget() != null ? oldConn.getTarget().getId() : null;
+                        IDiagramModelArchimateObject newTargetFig =
+                                targetId != null ? figureMap.get(targetId) : null;
 
-                            if (newSourceFig == null || newTargetFig == null) continue;
+                        if (newSourceFig == null || newTargetFig == null) continue;
 
-                            IDiagramModelArchimateConnection newConn =
-                                    IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
-                            newConn.setArchimateRelationship(oldConn.getArchimateRelationship());
-                            newConn.connect(newSourceFig, newTargetFig);
+                        IDiagramModelArchimateConnection newConn =
+                                IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
+                        newConn.setArchimateRelationship(oldConn.getArchimateRelationship());
+                        newConn.connect(newSourceFig, newTargetFig);
 
-                            for (IDiagramModelBendpoint oldBp : oldConn.getBendpoints()) {
-                                IDiagramModelBendpoint newBp =
-                                        IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
-                                newBp.setStartX(oldBp.getStartX());
-                                newBp.setStartY(oldBp.getStartY());
-                                newBp.setEndX(oldBp.getEndX());
-                                newBp.setEndY(oldBp.getEndY());
-                                newConn.getBendpoints().add(newBp);
-                            }
-
-                            if (oldConn.getLineColor() != null) newConn.setLineColor(oldConn.getLineColor());
-                            newConn.setLineWidth(oldConn.getLineWidth());
-                            if (oldConn.getFontColor() != null) newConn.setFontColor(oldConn.getFontColor());
-                            newConn.setTextPosition(oldConn.getTextPosition());
-                            connectionCount++;
+                        for (IDiagramModelBendpoint oldBp : oldConn.getBendpoints()) {
+                            IDiagramModelBendpoint newBp =
+                                    IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
+                            newBp.setStartX(oldBp.getStartX());
+                            newBp.setStartY(oldBp.getStartY());
+                            newBp.setEndX(oldBp.getEndX());
+                            newBp.setEndY(oldBp.getEndY());
+                            newConn.getBendpoints().add(newBp);
                         }
+
+                        if (oldConn.getLineColor() != null) newConn.setLineColor(oldConn.getLineColor());
+                        newConn.setLineWidth(oldConn.getLineWidth());
+                        if (oldConn.getFontColor() != null) newConn.setFontColor(oldConn.getFontColor());
+                        newConn.setTextPosition(oldConn.getTextPosition());
+                        connectionCount++;
                     }
                 }
             }
@@ -182,5 +158,36 @@ public class DuplicateViewTool implements ITool {
         });
 
         return ToolRegistry.MAPPER.writeValueAsString(result);
+    }
+
+    private void copyFigures(IDiagramModelContainer source, IDiagramModelContainer target,
+            Map<String, IDiagramModelArchimateObject> figureMap) {
+        for (var child : source.getChildren()) {
+            if (child instanceof IDiagramModelArchimateObject oldFig) {
+                IDiagramModelArchimateObject newFig =
+                        IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
+                newFig.setArchimateElement(oldFig.getArchimateElement());
+
+                IBounds oldBounds = oldFig.getBounds();
+                IBounds newBounds = IArchimateFactory.eINSTANCE.createBounds();
+                newBounds.setX(oldBounds.getX());
+                newBounds.setY(oldBounds.getY());
+                newBounds.setWidth(oldBounds.getWidth());
+                newBounds.setHeight(oldBounds.getHeight());
+                newFig.setBounds(newBounds);
+
+                if (oldFig.getFillColor() != null) newFig.setFillColor(oldFig.getFillColor());
+                if (oldFig.getLineColor() != null) newFig.setLineColor(oldFig.getLineColor());
+                if (oldFig.getFontColor() != null) newFig.setFontColor(oldFig.getFontColor());
+                newFig.setAlpha(oldFig.getAlpha());
+                newFig.setTextAlignment(oldFig.getTextAlignment());
+
+                target.getChildren().add(newFig);
+                figureMap.put(oldFig.getId(), newFig);
+
+                // Recurse into nested children
+                copyFigures(oldFig, newFig, figureMap);
+            }
+        }
     }
 }

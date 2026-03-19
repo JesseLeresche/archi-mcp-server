@@ -1,6 +1,8 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -11,6 +13,7 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelConnection;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -100,7 +103,14 @@ public class RemoveFigureFromViewTool implements ITool {
             String removedElementId = resolvedFigure.getArchimateElement().getId();
             String removedElementName = resolvedFigure.getArchimateElement().getName();
 
-            // EcoreUtil.delete removes the figure and all attached connections from the view
+            // Remove all source/target connections first to avoid orphaned connections
+            List<IDiagramModelConnection> conns = new ArrayList<>(resolvedFigure.getSourceConnections());
+            conns.addAll(resolvedFigure.getTargetConnections());
+            for (IDiagramModelConnection conn : conns) {
+                EcoreUtil.delete(conn, true);
+            }
+
+            // Now remove the figure itself
             EcoreUtil.delete(resolvedFigure, true);
 
             IEditorModelManager.INSTANCE.saveModel(model);

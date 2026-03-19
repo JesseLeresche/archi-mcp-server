@@ -70,19 +70,17 @@ public class GetViewsTool implements ITool {
                 entry.put("name", view.getName());
                 entry.put("documentation", view.getDocumentation());
 
-                int elementCount = 0;
+                List<IDiagramModelArchimateObject> allFigures =
+                        ModelAccessor.collectAllFigures(view);
                 List<String> elementIds = includeElements ? new ArrayList<>() : null;
 
-                for (var child : view.getChildren()) {
-                    if (child instanceof IDiagramModelArchimateObject dmo) {
-                        elementCount++;
-                        if (includeElements) {
-                            elementIds.add(dmo.getArchimateElement().getId());
-                        }
+                if (includeElements) {
+                    for (var dmo : allFigures) {
+                        elementIds.add(dmo.getArchimateElement().getId());
                     }
                 }
 
-                entry.put("element_count", elementCount);
+                entry.put("element_count", allFigures.size());
                 if (includeElements) {
                     entry.put("element_ids", elementIds);
                 }
