@@ -13,13 +13,14 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Query & filter** — search elements by type, layer, or name
 - **Full model authoring** — create elements, relationships, views, and folders with optional folder placement
 - **Type change** — change an element's ArchiMate type while preserving all relationships and view references
-- **Visual layout** — place elements on views, draw connections, set positions and sizes
+- **Visual layout** — place elements on views (including inside groups), draw connections, set positions and sizes
 - **Appearance control** — change fill color, font color, line color, opacity, and line width
 - **Property management** — update names, documentation, and custom key/value properties
 - **Folder browsing** — get folder tree hierarchy, list folder contents (elements, relationships, views)
 - **Folder management** — create folders and move elements, relationships, and views between folders
-- **View management** — duplicate views with all figures and connections, remove figures from views
-- **View layout** — query figure positions and sizes on any view
+- **View management** — duplicate views with all figures, groups, notes, and connections; remove figures from views
+- **View layout** — query figure positions and sizes on any view, including nested and grouped elements
+- **Groups & notes** — full support for visual grouping elements and notes on views
 - **Connection inspection** — get connection details including bendpoints, colors, and line width
 - **Connection management** — update or delete visual connections on views
 - **Access relationship support** — set access type (Read, Write, ReadWrite) on access relationships
@@ -139,7 +140,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `query_model` | Filter elements by ArchiMate type, layer, name, or folder |
-| `get_views` | List diagram views with optional element details |
+| `get_views` | List diagram views with element, group, and note counts |
 
 ### Authoring
 
@@ -154,12 +155,12 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 
 | Tool | Description |
 |------|-------------|
-| `add_element_to_view` | Place an element as a figure on a view |
+| `add_element_to_view` | Place an element as a figure on a view (optionally inside a group or parent) |
 | `add_relationship_to_view` | Draw a visual connection for a relationship |
-| `update_figure_appearance` | Set fill color, font color, line color, opacity, or line width |
-| `get_view_layout` | Return position and size (x, y, width, height) of all figures on a view |
-| `remove_figure_from_view` | Remove a visual figure from a view without deleting the element |
-| `duplicate_view` | Clone an existing view with all figures, connections, and appearance settings |
+| `update_figure_appearance` | Set fill color, font color, line color, opacity, or line width on any figure (elements, groups, notes) |
+| `get_view_layout` | Return position and size of all figures on a view, including nested elements, groups, and notes |
+| `remove_figure_from_view` | Remove a visual figure (element, group, or note) from a view without deleting the underlying element |
+| `duplicate_view` | Clone an existing view with all figures, groups, notes, connections, and appearance settings |
 
 ### Connections
 

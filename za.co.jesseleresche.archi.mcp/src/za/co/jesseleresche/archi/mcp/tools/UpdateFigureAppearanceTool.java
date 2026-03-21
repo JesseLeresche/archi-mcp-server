@@ -9,6 +9,7 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -121,16 +122,16 @@ public class UpdateFigureAppearanceTool implements ITool {
             throw new Exception("View not found: " + viewId);
         }
 
-        IDiagramModelArchimateObject figure;
+        IDiagramModelObject diagramObject;
         if (figureId != null) {
-            figure = ModelAccessor.findFigureById(view, figureId);
-            if (figure == null) {
+            diagramObject = ModelAccessor.findDiagramObjectById(view, figureId);
+            if (diagramObject == null) {
                 throw new Exception(
                         "Figure not found on view: " + figureId);
             }
         } else {
-            figure = ModelAccessor.findFigureByElementId(view, elementId);
-            if (figure == null) {
+            diagramObject = ModelAccessor.findFigureByElementId(view, elementId);
+            if (diagramObject == null) {
                 throw new Exception(
                         "No figure found for element on view: " + elementId);
             }
@@ -149,14 +150,16 @@ public class UpdateFigureAppearanceTool implements ITool {
         Integer textAlignment = args.has("text_alignment")
                 ? args.get("text_alignment").asInt() : null;
 
-        IDiagramModelArchimateObject fig = figure;
+        IDiagramModelObject fig = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             Map<String, Object> applied = new LinkedHashMap<>();
             applied.put("view_id", viewId);
             applied.put("figure_id", fig.getId());
-            applied.put("element_id",
-                    fig.getArchimateElement().getId());
+            if (fig instanceof IDiagramModelArchimateObject dmo) {
+                applied.put("element_id",
+                        dmo.getArchimateElement().getId());
+            }
 
             if (fillColor != null) {
                 fig.setFillColor(fillColor);

@@ -12,6 +12,8 @@ import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -66,6 +68,12 @@ public class AddElementToViewTool implements ITool {
         height.put("default", 55);
         height.put("description", "Figure height");
 
+        ObjectNode parentFigureId = properties.putObject("parent_figure_id");
+        parentFigureId.put("type", "string");
+        parentFigureId.put("description",
+                "Optional: ID of a parent figure (group or element) to nest this element inside. "
+                        + "Coordinates become relative to the parent.");
+
         ArrayNode required = schema.putArray("required");
         required.add("view_id");
         required.add("element_id");
@@ -86,6 +94,8 @@ public class AddElementToViewTool implements ITool {
         int y = args.has("y") ? args.get("y").asInt(50) : 50;
         int width = args.has("width") ? args.get("width").asInt(120) : 120;
         int height = args.has("height") ? args.get("height").asInt(55) : 55;
+        String parentFigureId = args.has("parent_figure_id")
+                ? args.get("parent_figure_id").asText() : null;
 
         IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
         if (view == null) {
@@ -95,6 +105,20 @@ public class AddElementToViewTool implements ITool {
         IArchimateElement element = ModelAccessor.findElementById(model, elementId);
         if (element == null) {
             throw new Exception("Element not found: " + elementId);
+        }
+
+        IDiagramModelContainer parentContainer;
+        if (parentFigureId != null) {
+            IDiagramModelObject parentObj = ModelAccessor.findDiagramObjectById(view, parentFigureId);
+            if (parentObj == null) {
+                throw new Exception("Parent figure not found on view: " + parentFigureId);
+            }
+            if (!(parentObj instanceof IDiagramModelContainer)) {
+                throw new Exception("Parent figure is not a container (cannot hold children): " + parentFigureId);
+            }
+            parentContainer = (IDiagramModelContainer) parentObj;
+        } else {
+            parentContainer = view;
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
@@ -109,13 +133,16 @@ public class AddElementToViewTool implements ITool {
             bounds.setHeight(height);
             figure.setBounds(bounds);
 
-            view.getChildren().add(figure);
+            parentContainer.getChildren().add(figure);
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("view_id", viewId);
             entry.put("element_id", elementId);
             entry.put("figure_id", figure.getId());
+            if (parentFigureId != null) {
+                entry.put("parent_figure_id", parentFigureId);
+            }
             entry.put("x", x);
             entry.put("y", y);
             entry.put("width", width);

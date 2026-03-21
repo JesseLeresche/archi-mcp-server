@@ -9,6 +9,9 @@ import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelGroup;
+import com.archimatetool.model.IDiagramModelNote;
+import com.archimatetool.model.IDiagramModelObject;
 import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -70,17 +73,29 @@ public class GetViewsTool implements ITool {
                 entry.put("name", view.getName());
                 entry.put("documentation", view.getDocumentation());
 
-                List<IDiagramModelArchimateObject> allFigures =
-                        ModelAccessor.collectAllFigures(view);
+                List<IDiagramModelObject> allObjects =
+                        ModelAccessor.collectAllDiagramObjects(view);
                 List<String> elementIds = includeElements ? new ArrayList<>() : null;
 
-                if (includeElements) {
-                    for (var dmo : allFigures) {
-                        elementIds.add(dmo.getArchimateElement().getId());
+                int elementCount = 0;
+                int groupCount = 0;
+                int noteCount = 0;
+                for (var obj : allObjects) {
+                    if (obj instanceof IDiagramModelArchimateObject dmo) {
+                        elementCount++;
+                        if (includeElements) {
+                            elementIds.add(dmo.getArchimateElement().getId());
+                        }
+                    } else if (obj instanceof IDiagramModelGroup) {
+                        groupCount++;
+                    } else if (obj instanceof IDiagramModelNote) {
+                        noteCount++;
                     }
                 }
 
-                entry.put("element_count", allFigures.size());
+                entry.put("element_count", elementCount);
+                if (groupCount > 0) entry.put("group_count", groupCount);
+                if (noteCount > 0) entry.put("note_count", noteCount);
                 if (includeElements) {
                     entry.put("element_ids", elementIds);
                 }

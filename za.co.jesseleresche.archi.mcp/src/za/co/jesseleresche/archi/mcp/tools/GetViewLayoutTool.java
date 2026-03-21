@@ -10,6 +10,9 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelGroup;
+import com.archimatetool.model.IDiagramModelNote;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -78,28 +81,31 @@ public class GetViewLayoutTool implements ITool {
 
         // Single-figure lookup
         if (figureId != null || elementId != null) {
-            IDiagramModelArchimateObject figure = figureId != null
-                    ? ModelAccessor.findFigureById(view, figureId)
-                    : ModelAccessor.findFigureByElementId(view, elementId);
-
-            if (figure == null) {
-                String label = figureId != null
-                        ? "Figure not found on view: " + figureId
-                        : "No figure found for element on view: " + elementId;
-                throw new Exception(label);
+            IDiagramModelObject obj;
+            if (figureId != null) {
+                obj = ModelAccessor.findDiagramObjectById(view, figureId);
+                if (obj == null) {
+                    throw new Exception("Figure not found on view: " + figureId);
+                }
+            } else {
+                obj = ModelAccessor.findFigureByElementId(view, elementId);
+                if (obj == null) {
+                    throw new Exception("No figure found for element on view: " + elementId);
+                }
             }
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("view_id", viewId);
             result.put("view_name", view.getName());
-            result.put("figures", List.of(toFigureMap(figure)));
+            result.put("figures", List.of(toDiagramObjectMap(obj)));
             return ToolRegistry.MAPPER.writeValueAsString(result);
         }
 
-        // All figures on the view (including nested)
+        // All diagram objects on the view (including nested groups and notes)
+        List<IDiagramModelObject> allObjects = ModelAccessor.collectAllDiagramObjects(view);
         List<Map<String, Object>> figures = new ArrayList<>();
-        for (var figure : ModelAccessor.collectAllFigures(view)) {
-            figures.add(toFigureMap(figure));
+        for (var obj : allObjects) {
+            figures.add(toDiagramObjectMap(obj));
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -110,14 +116,24 @@ public class GetViewLayoutTool implements ITool {
         return ToolRegistry.MAPPER.writeValueAsString(result);
     }
 
-    private Map<String, Object> toFigureMap(IDiagramModelArchimateObject figure) {
-        IBounds bounds = figure.getBounds();
+    private Map<String, Object> toDiagramObjectMap(IDiagramModelObject obj) {
+        IBounds bounds = obj.getBounds();
         Map<String, Object> entry = new LinkedHashMap<>();
-        entry.put("figure_id", figure.getId());
-        entry.put("element_id", figure.getArchimateElement().getId());
-        entry.put("element_name", figure.getArchimateElement().getName());
-        entry.put("element_type", figure.getArchimateElement().eClass().getName());
-        if (figure.eContainer() instanceof IDiagramModelArchimateObject parent) {
+        entry.put("figure_id", obj.getId());
+
+        if (obj instanceof IDiagramModelArchimateObject dmo) {
+            entry.put("element_id", dmo.getArchimateElement().getId());
+            entry.put("element_name", dmo.getArchimateElement().getName());
+            entry.put("element_type", dmo.getArchimateElement().eClass().getName());
+        } else if (obj instanceof IDiagramModelGroup group) {
+            entry.put("type", "Group");
+            entry.put("name", group.getName());
+        } else if (obj instanceof IDiagramModelNote note) {
+            entry.put("type", "Note");
+            entry.put("content", note.getContent());
+        }
+
+        if (obj.eContainer() instanceof IDiagramModelObject parent) {
             entry.put("parent_figure_id", parent.getId());
         }
         entry.put("x", bounds.getX());

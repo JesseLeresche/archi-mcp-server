@@ -15,6 +15,8 @@ import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IDiagramModelObject;
 import com.archimatetool.model.IFolder;
 
 /**
@@ -151,6 +153,41 @@ public class ModelAccessor {
     }
 
     /**
+     * Collect all IDiagramModelObject instances on a view (ArchiMate objects,
+     * groups, and notes), recursing into nested containers.
+     */
+    public static List<IDiagramModelObject> collectAllDiagramObjects(
+            IArchimateDiagramModel view) {
+        List<IDiagramModelObject> results = new ArrayList<>();
+        collectDiagramObjectsRecursive(view.getChildren(), results);
+        return results;
+    }
+
+    private static void collectDiagramObjectsRecursive(
+            java.util.List<? extends EObject> children,
+            List<IDiagramModelObject> results) {
+        for (var child : children) {
+            if (child instanceof IDiagramModelObject dmo) {
+                results.add(dmo);
+            }
+            if (child instanceof IDiagramModelContainer container) {
+                collectDiagramObjectsRecursive(container.getChildren(), results);
+            }
+        }
+    }
+
+    /**
+     * Find any diagram object on a view by its ID (ArchiMate object, group, or note).
+     * Searches recursively through nested containers.
+     */
+    public static IDiagramModelObject findDiagramObjectById(
+            IArchimateDiagramModel view, String id) {
+        return collectAllDiagramObjects(view).stream()
+                .filter(dmo -> id.equals(dmo.getId()))
+                .findFirst().orElse(null);
+    }
+
+    /**
      * Find all figures on a view (recursively through nested containers)
      * whose archimateElement has the given element ID.
      */
@@ -214,13 +251,13 @@ public class ModelAccessor {
 
     /**
      * Find an existing visual connection on a view for a given relationship ID.
-     * Searches recursively through nested containers.
+     * Searches all diagram objects (including groups/notes) recursively.
      * Returns null if no connection exists for this relationship.
      */
     public static IDiagramModelArchimateConnection findConnectionByRelationshipId(
             IArchimateDiagramModel view, String relationshipId) {
-        for (var figure : collectAllFigures(view)) {
-            for (var conn : figure.getSourceConnections()) {
+        for (var dmo : collectAllDiagramObjects(view)) {
+            for (var conn : dmo.getSourceConnections()) {
                 if (conn instanceof IDiagramModelArchimateConnection c
                         && relationshipId.equals(c.getArchimateRelationship().getId())) {
                     return c;
@@ -232,13 +269,13 @@ public class ModelAccessor {
 
     /**
      * Find a visual connection on a view by its own connection ID.
-     * Searches recursively through nested containers.
+     * Searches all diagram objects (including groups/notes) recursively.
      * Returns null if not found.
      */
     public static IDiagramModelArchimateConnection findConnectionById(
             IArchimateDiagramModel view, String connectionId) {
-        for (var figure : collectAllFigures(view)) {
-            for (var conn : figure.getSourceConnections()) {
+        for (var dmo : collectAllDiagramObjects(view)) {
+            for (var conn : dmo.getSourceConnections()) {
                 if (conn instanceof IDiagramModelArchimateConnection c
                         && connectionId.equals(c.getId())) {
                     return c;

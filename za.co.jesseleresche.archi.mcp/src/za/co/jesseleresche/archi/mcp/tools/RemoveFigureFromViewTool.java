@@ -14,6 +14,7 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelConnection;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -83,43 +84,43 @@ public class RemoveFigureFromViewTool implements ITool {
             throw new Exception("View not found: " + viewId);
         }
 
-        IDiagramModelArchimateObject figure;
+        IDiagramModelObject diagramObject;
         if (figureId != null) {
-            figure = ModelAccessor.findFigureById(view, figureId);
-            if (figure == null) {
+            diagramObject = ModelAccessor.findDiagramObjectById(view, figureId);
+            if (diagramObject == null) {
                 throw new Exception("Figure not found on view: " + figureId);
             }
         } else {
-            figure = ModelAccessor.findFigureByElementId(view, elementId);
-            if (figure == null) {
+            diagramObject = ModelAccessor.findFigureByElementId(view, elementId);
+            if (diagramObject == null) {
                 throw new Exception("No figure found for element on view: " + elementId);
             }
         }
 
-        IDiagramModelArchimateObject resolvedFigure = figure;
+        IDiagramModelObject resolved = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            String removedFigureId = resolvedFigure.getId();
-            String removedElementId = resolvedFigure.getArchimateElement().getId();
-            String removedElementName = resolvedFigure.getArchimateElement().getName();
+            String removedFigureId = resolved.getId();
 
             // Remove all source/target connections first to avoid orphaned connections
-            List<IDiagramModelConnection> conns = new ArrayList<>(resolvedFigure.getSourceConnections());
-            conns.addAll(resolvedFigure.getTargetConnections());
+            List<IDiagramModelConnection> conns = new ArrayList<>(resolved.getSourceConnections());
+            conns.addAll(resolved.getTargetConnections());
             for (IDiagramModelConnection conn : conns) {
                 EcoreUtil.delete(conn, true);
             }
 
             // Now remove the figure itself
-            EcoreUtil.delete(resolvedFigure, true);
+            EcoreUtil.delete(resolved, true);
 
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("view_id", viewId);
             entry.put("figure_id", removedFigureId);
-            entry.put("element_id", removedElementId);
-            entry.put("element_name", removedElementName);
+            if (diagramObject instanceof IDiagramModelArchimateObject dmo) {
+                entry.put("element_id", dmo.getArchimateElement().getId());
+                entry.put("element_name", dmo.getArchimateElement().getName());
+            }
             entry.put("success", true);
             return entry;
         });
