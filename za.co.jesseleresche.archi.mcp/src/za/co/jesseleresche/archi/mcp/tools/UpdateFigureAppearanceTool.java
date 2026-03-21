@@ -153,41 +153,29 @@ public class UpdateFigureAppearanceTool implements ITool {
         IDiagramModelObject fig = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            Map<String, Object> applied = new LinkedHashMap<>();
-            applied.put("view_id", viewId);
-            applied.put("figure_id", fig.getId());
-            if (fig instanceof IDiagramModelArchimateObject dmo) {
-                applied.put("element_id",
-                        dmo.getArchimateElement().getId());
-            }
-
             if (fillColor != null) {
                 fig.setFillColor(fillColor);
-                applied.put("fill_color", fillColor);
             }
             if (fontColor != null) {
                 fig.setFontColor(fontColor);
-                applied.put("font_color", fontColor);
             }
             if (lineColor != null) {
                 fig.setLineColor(lineColor);
-                applied.put("line_color", lineColor);
             }
             if (opacity != null) {
                 fig.setAlpha(opacity);
-                applied.put("opacity", opacity);
             }
             if (lineWidth != null) {
                 fig.setLineWidth(lineWidth);
-                applied.put("line_width", lineWidth);
             }
             if (textAlignment != null) {
                 fig.setTextAlignment(textAlignment);
-                applied.put("text_alignment", textAlignment);
             }
 
             IEditorModelManager.INSTANCE.saveModel(model);
-            applied.put("success", true);
+
+            Map<String, Object> applied = new LinkedHashMap<>();
+            applied.put("figure_id", fig.getId());
             return applied;
         });
 

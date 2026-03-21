@@ -103,15 +103,10 @@ public class DeleteElementTool implements ITool {
 
         if (dryRun) {
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("element_id", elementId);
-            result.put("element_name", elementName);
-            result.put("element_type", elementType);
             result.put("relationships_to_delete", relationships.size());
             result.put("figures_to_remove", figureCount);
             result.put("connections_to_remove", connectionCount);
             result.put("affected_view_ids", affectedViewIds);
-            result.put("dry_run", true);
-            result.put("success", true);
             return ToolRegistry.MAPPER.writeValueAsString(result);
         }
 
@@ -142,12 +137,8 @@ public class DeleteElementTool implements ITool {
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("element_id", elementId);
-            entry.put("element_name", elementName);
-            entry.put("element_type", elementType);
             entry.put("relationships_deleted", counts[0]);
             entry.put("figures_removed", counts[1]);
-            entry.put("success", true);
             return entry;
         });
 

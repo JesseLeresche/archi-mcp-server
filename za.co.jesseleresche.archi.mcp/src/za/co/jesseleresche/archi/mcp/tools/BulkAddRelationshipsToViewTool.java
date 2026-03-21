@@ -102,7 +102,6 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                 try {
                     IArchimateRelationship relationship = ModelAccessor.findRelationshipById(model, relationshipId);
                     if (relationship == null) {
-                        entry.put("success", false);
                         entry.put("error", "Relationship not found: " + relationshipId);
                         entries.add(entry);
                         continue;
@@ -116,7 +115,6 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                         sourceFigure = ModelAccessor.findFigureByElementId(view, relationship.getSource().getId());
                     }
                     if (sourceFigure == null) {
-                        entry.put("success", false);
                         entry.put("error", "Source element '" + relationship.getSource().getName()
                                 + "' not found on view. Call add_element_to_view first.");
                         entries.add(entry);
@@ -131,7 +129,6 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                         targetFigure = ModelAccessor.findFigureByElementId(view, relationship.getTarget().getId());
                     }
                     if (targetFigure == null) {
-                        entry.put("success", false);
                         entry.put("error", "Target element '" + relationship.getTarget().getName()
                                 + "' not found on view. Call add_element_to_view first.");
                         entries.add(entry);
@@ -144,7 +141,6 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                     if (existing != null) {
                         entry.put("connection_id", existing.getId());
                         entry.put("already_exists", true);
-                        entry.put("success", true);
                         entries.add(entry);
                         continue;
                     }
@@ -167,13 +163,7 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                     }
 
                     entry.put("connection_id", connection.getId());
-                    entry.put("source_figure_id", sourceFigure.getId());
-                    entry.put("target_figure_id", targetFigure.getId());
-                    entry.put("bendpoint_count", connection.getBendpoints().size());
-                    entry.put("already_exists", false);
-                    entry.put("success", true);
                 } catch (Exception e) {
-                    entry.put("success", false);
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
@@ -184,10 +174,7 @@ public class BulkAddRelationshipsToViewTool implements ITool {
         });
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("view_id", viewId);
         response.put("results", results);
-        response.put("total", results.size());
-        response.put("succeeded", results.stream().filter(r -> Boolean.TRUE.equals(r.get("success"))).count());
         return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }

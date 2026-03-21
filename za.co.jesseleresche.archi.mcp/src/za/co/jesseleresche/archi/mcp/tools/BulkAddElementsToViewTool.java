@@ -102,7 +102,6 @@ public class BulkAddElementsToViewTool implements ITool {
                 try {
                     IArchimateElement element = ModelAccessor.findElementById(model, elementId);
                     if (element == null) {
-                        entry.put("success", false);
                         entry.put("error", "Element not found: " + elementId);
                         entries.add(entry);
                         continue;
@@ -125,13 +124,7 @@ public class BulkAddElementsToViewTool implements ITool {
                     view.getChildren().add(figure);
 
                     entry.put("figure_id", figure.getId());
-                    entry.put("x", x);
-                    entry.put("y", y);
-                    entry.put("width", w);
-                    entry.put("height", h);
-                    entry.put("success", true);
                 } catch (Exception e) {
-                    entry.put("success", false);
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
@@ -142,10 +135,7 @@ public class BulkAddElementsToViewTool implements ITool {
         });
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("view_id", viewId);
         response.put("results", results);
-        response.put("total", results.size());
-        response.put("succeeded", results.stream().filter(r -> Boolean.TRUE.equals(r.get("success"))).count());
         return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }

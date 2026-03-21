@@ -109,10 +109,7 @@ public class CreateElementTool implements ITool {
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", element.getId());
-            entry.put("name", element.getName());
-            entry.put("type", element.eClass().getName());
             entry.put("folder_id", folder.getId());
-            entry.put("success", true);
             return entry;
         });
 

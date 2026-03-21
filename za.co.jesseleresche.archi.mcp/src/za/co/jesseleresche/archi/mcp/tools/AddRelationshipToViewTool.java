@@ -137,12 +137,7 @@ public class AddRelationshipToViewTool implements ITool {
         if (existing != null) {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("connection_id", existing.getId());
-            result.put("view_id", viewId);
-            result.put("relationship_id", relationshipId);
-            result.put("source_figure_id", sourceFigure.getId());
-            result.put("target_figure_id", targetFigure.getId());
             result.put("already_exists", true);
-            result.put("success", true);
             return ToolRegistry.MAPPER.writeValueAsString(result);
         }
 
@@ -171,13 +166,6 @@ public class AddRelationshipToViewTool implements ITool {
             // Step 8: Return result
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("connection_id", connection.getId());
-            entry.put("view_id", viewId);
-            entry.put("relationship_id", relationshipId);
-            entry.put("source_figure_id", sourceFigure.getId());
-            entry.put("target_figure_id", targetFigure.getId());
-            entry.put("bendpoint_count", connection.getBendpoints().size());
-            entry.put("already_exists", false);
-            entry.put("success", true);
             return entry;
         });
 

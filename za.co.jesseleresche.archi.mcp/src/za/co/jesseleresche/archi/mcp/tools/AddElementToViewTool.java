@@ -137,17 +137,7 @@ public class AddElementToViewTool implements ITool {
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("view_id", viewId);
-            entry.put("element_id", elementId);
             entry.put("figure_id", figure.getId());
-            if (parentFigureId != null) {
-                entry.put("parent_figure_id", parentFigureId);
-            }
-            entry.put("x", x);
-            entry.put("y", y);
-            entry.put("width", width);
-            entry.put("height", height);
-            entry.put("success", true);
             return entry;
         });
 

@@ -107,12 +107,10 @@ public class GetConnectionTool implements ITool {
         result.put("relationship_name", connection.getArchimateRelationship().getName());
         result.put("source_figure_id", connection.getSource() != null ? connection.getSource().getId() : null);
         result.put("target_figure_id", connection.getTarget() != null ? connection.getTarget().getId() : null);
-        result.put("view_id", viewId);
         result.put("line_color", connection.getLineColor());
         result.put("line_width", connection.getLineWidth());
         result.put("font_color", connection.getFontColor());
         result.put("text_position", connection.getTextPosition());
-        result.put("bendpoint_count", bendpoints.size());
         result.put("bendpoints", bendpoints);
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

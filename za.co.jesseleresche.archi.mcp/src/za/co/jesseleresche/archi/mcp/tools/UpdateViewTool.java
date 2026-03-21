@@ -8,25 +8,23 @@ import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
-import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Moves an existing diagram view into a different folder or subfolder.
+ * Updates the name and/or documentation of an existing diagram view.
  */
-public class MoveViewToFolderTool implements ITool {
+public class UpdateViewTool implements ITool {
 
     @Override
     public String getName() {
-        return "move_view_to_folder";
+        return "update_view";
     }
 
     @Override
     public String getDescription() {
-        return "Move an existing diagram view into a different folder or subfolder. "
-                + "The target folder must already exist in the model.";
+        return "Update an existing view's name and/or documentation.";
     }
 
     @Override
@@ -38,15 +36,18 @@ public class MoveViewToFolderTool implements ITool {
 
         ObjectNode viewId = properties.putObject("view_id");
         viewId.put("type", "string");
-        viewId.put("description", "ID of the view to move");
+        viewId.put("description", "ID of the view to update");
 
-        ObjectNode folderId = properties.putObject("folder_id");
-        folderId.put("type", "string");
-        folderId.put("description", "ID of the target folder to move the view into");
+        ObjectNode name = properties.putObject("name");
+        name.put("type", "string");
+        name.put("description", "New view name");
+
+        ObjectNode documentation = properties.putObject("documentation");
+        documentation.put("type", "string");
+        documentation.put("description", "New documentation text");
 
         ArrayNode required = schema.putArray("required");
         required.add("view_id");
-        required.add("folder_id");
 
         return schema;
     }
@@ -59,33 +60,27 @@ public class MoveViewToFolderTool implements ITool {
         }
 
         String viewId = args.get("view_id").asText();
-        String folderId = args.get("folder_id").asText();
+        String newName = args.has("name") ? args.get("name").asText() : null;
+        String newDoc = args.has("documentation")
+                ? args.get("documentation").asText() : null;
 
         IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
         if (view == null) {
             throw new Exception("View not found: " + viewId);
         }
 
-        IFolder targetFolder = ModelAccessor.findFolderById(model, folderId);
-        if (targetFolder == null) {
-            throw new Exception("Folder not found: " + folderId);
-        }
-
-        IFolder resolvedTarget = targetFolder;
-
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            IFolder currentFolder = (IFolder) view.eContainer();
-            String previousFolderId = currentFolder != null ? currentFolder.getId() : null;
-
-            if (currentFolder != null) {
-                currentFolder.getElements().remove(view);
+            if (newName != null) {
+                view.setName(newName);
             }
-            resolvedTarget.getElements().add(view);
+            if (newDoc != null) {
+                view.setDocumentation(newDoc);
+            }
 
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("previous_folder_id", previousFolderId);
+            entry.put("view_id", view.getId());
             return entry;
         });
 

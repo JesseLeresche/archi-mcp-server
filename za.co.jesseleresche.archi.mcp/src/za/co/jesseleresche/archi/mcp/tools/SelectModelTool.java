@@ -54,8 +54,6 @@ public class SelectModelTool implements ITool {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", model.getId());
         result.put("name", model.getName());
-        result.put("selected", true);
-        result.put("success", true);
 
         return ToolRegistry.MAPPER.writeValueAsString(result);
     }

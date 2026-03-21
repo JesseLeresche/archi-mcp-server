@@ -94,9 +94,7 @@ public class CreateViewTool implements ITool {
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", view.getId());
-            entry.put("name", view.getName());
             entry.put("folder_id", folder.getId());
-            entry.put("success", true);
             return entry;
         });
 

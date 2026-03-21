@@ -5,13 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.EObject;
-
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
-import com.archimatetool.model.IArchimateElement;
+import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IFolder;
@@ -20,20 +17,19 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Creates multiple ArchiMate elements in a single call.
+ * Creates multiple empty ArchiMate diagram views in a single call.
  */
-public class BulkCreateElementsTool implements ITool {
+public class BulkCreateViewsTool implements ITool {
 
     @Override
     public String getName() {
-        return "bulk_create_elements";
+        return "bulk_create_views";
     }
 
     @Override
     public String getDescription() {
-        return "Create multiple ArchiMate elements in a single call. "
-                + "Returns a result entry per element, with per-item success or error. "
-                + "Each item may optionally specify a folder_id.";
+        return "Create multiple empty ArchiMate diagram views in a single call. "
+                + "Each item may optionally specify a folder_id and documentation.";
     }
 
     @Override
@@ -43,23 +39,21 @@ public class BulkCreateElementsTool implements ITool {
 
         ObjectNode properties = schema.putObject("properties");
 
-        ObjectNode elements = properties.putObject("elements");
-        elements.put("type", "array");
-        elements.put("description", "List of elements to create");
-        ObjectNode items = elements.putObject("items");
+        ObjectNode views = properties.putObject("views");
+        views.put("type", "array");
+        views.put("description", "List of views to create");
+        ObjectNode items = views.putObject("items");
         items.put("type", "object");
         ObjectNode itemProps = items.putObject("properties");
         itemProps.putObject("name").put("type", "string");
-        itemProps.putObject("type").put("type", "string");
-        itemProps.putObject("documentation").put("type", "string");
         itemProps.putObject("folder_id").put("type", "string")
-                .put("description", "Optional folder ID for this element");
+                .put("description", "Optional folder ID for this view");
+        itemProps.putObject("documentation").put("type", "string");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("name");
-        itemRequired.add("type");
 
         ArrayNode required = schema.putArray("required");
-        required.add("elements");
+        required.add("views");
 
         return schema;
     }
@@ -71,50 +65,46 @@ public class BulkCreateElementsTool implements ITool {
             throw new Exception("No model is currently open in Archi");
         }
 
-        JsonNode elementsNode = args.get("elements");
-        if (!elementsNode.isArray() || elementsNode.isEmpty()) {
-            throw new Exception("'elements' must be a non-empty array");
+        JsonNode viewsNode = args.get("views");
+        if (!viewsNode.isArray() || viewsNode.isEmpty()) {
+            throw new Exception("'views' must be a non-empty array");
         }
 
         List<Map<String, Object>> results = UiThreadUtil.syncExec(() -> {
             List<Map<String, Object>> entries = new ArrayList<>();
 
-            for (JsonNode item : elementsNode) {
+            for (JsonNode item : viewsNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
                     String name = item.get("name").asText();
-                    String typeName = item.get("type").asText();
-                    String documentation = item.has("documentation") ? item.get("documentation").asText() : null;
-                    String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
+                    String folderId = item.has("folder_id")
+                            ? item.get("folder_id").asText() : null;
+                    String documentation = item.has("documentation")
+                            ? item.get("documentation").asText() : null;
 
-                    EClass eClass = ModelAccessor.resolveElementClass(typeName);
-                    if (eClass == null) {
-                        entry.put("error", "Unknown ArchiMate element type: " + typeName);
-                        entries.add(entry);
-                        continue;
-                    }
-
-                    EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
-                    IArchimateElement element = (IArchimateElement) eObject;
-                    element.setName(name);
+                    IArchimateDiagramModel view =
+                            IArchimateFactory.eINSTANCE
+                                    .createArchimateDiagramModel();
+                    view.setName(name);
                     if (documentation != null) {
-                        element.setDocumentation(documentation);
+                        view.setDocumentation(documentation);
                     }
 
                     IFolder folder;
                     if (folderId != null) {
                         folder = ModelAccessor.findFolderById(model, folderId);
                         if (folder == null) {
-                            entry.put("error", "Folder not found: " + folderId);
+                            entry.put("error",
+                                    "Folder not found: " + folderId);
                             entries.add(entry);
                             continue;
                         }
                     } else {
-                        folder = model.getDefaultFolderForObject(element);
+                        folder = model.getDefaultFolderForObject(view);
                     }
-                    folder.getElements().add(element);
+                    folder.getElements().add(view);
 
-                    entry.put("id", element.getId());
+                    entry.put("id", view.getId());
                     entry.put("folder_id", folder.getId());
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());

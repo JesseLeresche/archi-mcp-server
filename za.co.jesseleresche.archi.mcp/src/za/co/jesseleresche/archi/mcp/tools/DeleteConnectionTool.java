@@ -97,21 +97,12 @@ public class DeleteConnectionTool implements ITool {
         }
 
         IDiagramModelArchimateConnection conn = connection;
-        String deletedConnectionId = connection.getId();
-        String deletedRelationshipId = connection.getArchimateRelationship().getId();
-        String deletedRelationshipName = connection.getArchimateRelationship().getName();
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             EcoreUtil.delete(conn, true);
             IEditorModelManager.INSTANCE.saveModel(model);
 
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("connection_id", deletedConnectionId);
-            entry.put("relationship_id", deletedRelationshipId);
-            entry.put("relationship_name", deletedRelationshipName);
-            entry.put("view_id", viewId);
-            entry.put("success", true);
-            return entry;
+            return new LinkedHashMap<String, Object>();
         });
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

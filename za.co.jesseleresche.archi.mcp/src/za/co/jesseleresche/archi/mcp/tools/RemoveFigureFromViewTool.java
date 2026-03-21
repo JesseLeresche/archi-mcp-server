@@ -12,7 +12,6 @@ import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
-import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelConnection;
 import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -100,8 +99,6 @@ public class RemoveFigureFromViewTool implements ITool {
         IDiagramModelObject resolved = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            String removedFigureId = resolved.getId();
-
             // Remove all source/target connections first to avoid orphaned connections
             List<IDiagramModelConnection> conns = new ArrayList<>(resolved.getSourceConnections());
             conns.addAll(resolved.getTargetConnections());
@@ -114,15 +111,7 @@ public class RemoveFigureFromViewTool implements ITool {
 
             IEditorModelManager.INSTANCE.saveModel(model);
 
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("view_id", viewId);
-            entry.put("figure_id", removedFigureId);
-            if (diagramObject instanceof IDiagramModelArchimateObject dmo) {
-                entry.put("element_id", dmo.getArchimateElement().getId());
-                entry.put("element_name", dmo.getArchimateElement().getName());
-            }
-            entry.put("success", true);
-            return entry;
+            return new LinkedHashMap<String, Object>();
         });
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

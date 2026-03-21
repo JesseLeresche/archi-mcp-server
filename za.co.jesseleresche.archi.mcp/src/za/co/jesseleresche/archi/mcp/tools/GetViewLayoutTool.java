@@ -95,8 +95,6 @@ public class GetViewLayoutTool implements ITool {
             }
 
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("view_id", viewId);
-            result.put("view_name", view.getName());
             result.put("figures", List.of(toDiagramObjectMap(obj)));
             return ToolRegistry.MAPPER.writeValueAsString(result);
         }
@@ -109,9 +107,6 @@ public class GetViewLayoutTool implements ITool {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("view_id", viewId);
-        result.put("view_name", view.getName());
-        result.put("figure_count", figures.size());
         result.put("figures", figures);
         return ToolRegistry.MAPPER.writeValueAsString(result);
     }

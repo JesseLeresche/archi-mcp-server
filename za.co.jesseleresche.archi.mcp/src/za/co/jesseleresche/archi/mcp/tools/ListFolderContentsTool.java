@@ -102,16 +102,10 @@ public class ListFolderContentsTool implements ITool {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("folder_id", folder.getId());
-        result.put("folder_name", folder.getName());
         result.put("elements", elements);
         result.put("relationships", relationships);
         result.put("views", views);
         result.put("subfolders", subfolders);
-        result.put("element_count", elements.size());
-        result.put("relationship_count", relationships.size());
-        result.put("view_count", views.size());
-        result.put("subfolder_count", subfolders.size());
 
         return ToolRegistry.MAPPER.writeValueAsString(result);
     }

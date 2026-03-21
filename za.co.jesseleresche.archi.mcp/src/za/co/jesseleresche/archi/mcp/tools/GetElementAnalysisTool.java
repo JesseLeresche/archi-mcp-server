@@ -82,7 +82,6 @@ public class GetElementAnalysisTool implements ITool {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("element_id", element.getId());
         result.put("name", element.getName());
         result.put("type", element.eClass().getName());
 
@@ -123,8 +122,6 @@ public class GetElementAnalysisTool implements ITool {
 
         result.put("outgoing_relationships", outgoing);
         result.put("incoming_relationships", incoming);
-        result.put("total_relationships",
-                outgoing.size() + incoming.size());
 
         // Collect views where this element appears
         List<IArchimateDiagramModel> allViews =
@@ -145,7 +142,6 @@ public class GetElementAnalysisTool implements ITool {
         }
 
         result.put("used_in_views", usedInViews);
-        result.put("total_views", usedInViews.size());
 
         // Include custom properties
         if (includeProperties && !element.getProperties().isEmpty()) {

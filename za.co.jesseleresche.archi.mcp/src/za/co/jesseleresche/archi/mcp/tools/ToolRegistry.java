@@ -51,7 +51,12 @@ public class ToolRegistry {
         register(new ListFolderContentsTool());
         register(new GetFolderTreeTool());
         register(new GetConnectionTool());
+        register(new GetViewConnectionsTool());
         register(new DuplicateViewTool());
+        register(new UpdateViewTool());
+        register(new BulkCreateViewsTool());
+        register(new BulkUpdateFigureAppearanceTool());
+        register(new CreateSdOverviewViewTool());
     }
 
     private void register(ITool tool) {

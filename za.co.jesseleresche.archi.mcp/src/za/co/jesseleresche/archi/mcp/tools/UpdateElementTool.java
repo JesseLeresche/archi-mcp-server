@@ -1,8 +1,6 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
@@ -193,11 +191,7 @@ public class UpdateElementTool implements ITool {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 entry.put("old_id", element.getId());
                 entry.put("new_id", newElement.getId());
-                entry.put("name", newElement.getName());
-                entry.put("old_type", element.eClass().getName());
-                entry.put("new_type", newElement.eClass().getName());
                 entry.put("folder_id", targetFolder.getId());
-                entry.put("success", true);
                 return entry;
             });
 
@@ -206,33 +200,24 @@ public class UpdateElementTool implements ITool {
 
         // Standard update (no type change)
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("element_id", element.getId());
-
             if (newName != null) {
                 element.setName(newName);
-                entry.put("name", newName);
             }
             if (newDoc != null) {
                 element.setDocumentation(newDoc);
-                entry.put("documentation", newDoc);
             }
             if (propsNode != null && propsNode.isArray()) {
-                List<Map<String, String>> updatedProps = new ArrayList<>();
                 for (JsonNode propEntry : propsNode) {
-                    String k = propEntry.get("key").asText();
-                    String v = propEntry.get("value").asText();
-                    setProperty(element, k, v);
-                    Map<String, String> kv = new LinkedHashMap<>();
-                    kv.put("key", k);
-                    kv.put("value", v);
-                    updatedProps.add(kv);
+                    setProperty(element,
+                            propEntry.get("key").asText(),
+                            propEntry.get("value").asText());
                 }
-                entry.put("properties", updatedProps);
             }
 
             IEditorModelManager.INSTANCE.saveModel(model);
-            entry.put("success", true);
+
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("element_id", element.getId());
             return entry;
         });
 

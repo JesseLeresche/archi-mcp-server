@@ -134,7 +134,10 @@ public class QueryModelTool implements ITool {
             entry.put("name", element.getName());
             entry.put("type", type);
             entry.put("layer", layer);
-            entry.put("documentation", element.getDocumentation());
+            String doc = element.getDocumentation();
+            if (doc != null && !doc.isEmpty()) {
+                entry.put("documentation", doc);
+            }
             results.add(entry);
         }
 

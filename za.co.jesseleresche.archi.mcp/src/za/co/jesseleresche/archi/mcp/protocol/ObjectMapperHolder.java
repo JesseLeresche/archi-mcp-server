@@ -1,5 +1,6 @@
 package za.co.jesseleresche.archi.mcp.protocol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -10,7 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public final class ObjectMapperHolder {
 
-    static final ObjectMapper MAPPER = new ObjectMapper();
+    static final ObjectMapper MAPPER = new ObjectMapper()
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     private ObjectMapperHolder() {
         // utility class

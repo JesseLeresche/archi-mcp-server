@@ -71,7 +71,10 @@ public class GetViewsTool implements ITool {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 entry.put("id", view.getId());
                 entry.put("name", view.getName());
-                entry.put("documentation", view.getDocumentation());
+                String doc = view.getDocumentation();
+                if (doc != null && !doc.isEmpty()) {
+                    entry.put("documentation", doc);
+                }
 
                 List<IDiagramModelObject> allObjects =
                         ModelAccessor.collectAllDiagramObjects(view);

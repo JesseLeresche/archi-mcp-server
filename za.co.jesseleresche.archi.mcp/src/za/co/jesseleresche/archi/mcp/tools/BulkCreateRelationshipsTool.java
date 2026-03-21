@@ -97,8 +97,6 @@ public class BulkCreateRelationshipsTool implements ITool {
 
                     IArchimateElement source = ModelAccessor.findElementById(model, sourceId);
                     if (source == null) {
-                        entry.put("source_id", sourceId);
-                        entry.put("success", false);
                         entry.put("error", "Source element not found: " + sourceId);
                         entries.add(entry);
                         continue;
@@ -106,8 +104,6 @@ public class BulkCreateRelationshipsTool implements ITool {
 
                     IArchimateElement target = ModelAccessor.findElementById(model, targetId);
                     if (target == null) {
-                        entry.put("target_id", targetId);
-                        entry.put("success", false);
                         entry.put("error", "Target element not found: " + targetId);
                         entries.add(entry);
                         continue;
@@ -115,7 +111,6 @@ public class BulkCreateRelationshipsTool implements ITool {
 
                     EClass eClass = ModelAccessor.resolveRelationshipClass(typeName);
                     if (eClass == null) {
-                        entry.put("success", false);
                         entry.put("error", "Unknown relationship type: " + typeName);
                         entries.add(entry);
                         continue;
@@ -136,7 +131,6 @@ public class BulkCreateRelationshipsTool implements ITool {
                     if (folderId != null) {
                         folder = ModelAccessor.findFolderById(model, folderId);
                         if (folder == null) {
-                            entry.put("success", false);
                             entry.put("error", "Folder not found: " + folderId);
                             entries.add(entry);
                             continue;
@@ -147,16 +141,8 @@ public class BulkCreateRelationshipsTool implements ITool {
                     folder.getElements().add(relationship);
 
                     entry.put("id", relationship.getId());
-                    entry.put("source_id", sourceId);
-                    entry.put("target_id", targetId);
-                    entry.put("type", relationship.eClass().getName());
                     entry.put("folder_id", folder.getId());
-                    if (relationship instanceof IAccessRelationship accessRel) {
-                        entry.put("access_type", accessRel.getAccessType());
-                    }
-                    entry.put("success", true);
                 } catch (Exception e) {
-                    entry.put("success", false);
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
@@ -168,8 +154,6 @@ public class BulkCreateRelationshipsTool implements ITool {
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
-        response.put("total", results.size());
-        response.put("succeeded", results.stream().filter(r -> Boolean.TRUE.equals(r.get("success"))).count());
         return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }

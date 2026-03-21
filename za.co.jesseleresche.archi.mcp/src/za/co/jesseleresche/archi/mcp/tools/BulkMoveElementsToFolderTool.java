@@ -86,7 +86,6 @@ public class BulkMoveElementsToFolderTool implements ITool {
                     String relationshipId = item.has("relationship_id") ? item.get("relationship_id").asText() : null;
 
                     if (elementId == null && relationshipId == null) {
-                        entry.put("success", false);
                         entry.put("error", "Each item must specify either element_id or relationship_id");
                         entries.add(entry);
                         continue;
@@ -94,7 +93,6 @@ public class BulkMoveElementsToFolderTool implements ITool {
 
                     IFolder targetFolder = ModelAccessor.findFolderById(model, folderId);
                     if (targetFolder == null) {
-                        entry.put("success", false);
                         entry.put("error", "Folder not found: " + folderId);
                         entries.add(entry);
                         continue;
@@ -104,7 +102,6 @@ public class BulkMoveElementsToFolderTool implements ITool {
                         entry.put("element_id", elementId);
                         IArchimateElement element = ModelAccessor.findElementById(model, elementId);
                         if (element == null) {
-                            entry.put("success", false);
                             entry.put("error", "Element not found: " + elementId);
                             entries.add(entry);
                             continue;
@@ -118,7 +115,6 @@ public class BulkMoveElementsToFolderTool implements ITool {
                         entry.put("relationship_id", relationshipId);
                         IArchimateRelationship rel = ModelAccessor.findRelationshipById(model, relationshipId);
                         if (rel == null) {
-                            entry.put("success", false);
                             entry.put("error", "Relationship not found: " + relationshipId);
                             entries.add(entry);
                             continue;
@@ -130,11 +126,7 @@ public class BulkMoveElementsToFolderTool implements ITool {
                         targetFolder.getElements().add(rel);
                     }
 
-                    entry.put("folder_id", targetFolder.getId());
-                    entry.put("folder_name", targetFolder.getName());
-                    entry.put("success", true);
                 } catch (Exception e) {
-                    entry.put("success", false);
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
@@ -146,10 +138,6 @@ public class BulkMoveElementsToFolderTool implements ITool {
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
-        response.put("total", results.size());
-        response.put("succeeded", results.stream()
-                .filter(r -> Boolean.TRUE.equals(r.get("success")))
-                .count());
         return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }

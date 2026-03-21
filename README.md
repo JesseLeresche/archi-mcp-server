@@ -25,7 +25,14 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Connection management** — update or delete visual connections on views
 - **Access relationship support** — set access type (Read, Write, ReadWrite) on access relationships
 - **Bulk operations** — create, update, or move multiple elements, relationships, or views in a single call
+- **Bulk type change** — change the ArchiMate type of multiple elements in one call, preserving all references
+- **Bulk view creation** — create multiple views in a single call
+- **Bulk figure styling** — update appearance of multiple figures across views in one call
+- **View editing** — update a view's name and documentation after creation
+- **Connection inspection** — list all connections on a view with routing, bendpoints, and access types
+- **BIAN SD Overview composite** — create a complete BIAN Service Domain Overview view (elements, relationships, figures, connections, styling) in one atomic call
 - **Element analysis** — inspect an element's relationships and view usage
+- **Token-efficient responses** — minimal JSON responses (no echoed inputs, no success flags, no derivable counts) to reduce LLM token usage by ~35-40%
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
 ## Tested With
@@ -161,12 +168,14 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `get_view_layout` | Return position and size of all figures on a view, including nested elements, groups, and notes |
 | `remove_figure_from_view` | Remove a visual figure (element, group, or note) from a view without deleting the underlying element |
 | `duplicate_view` | Clone an existing view with all figures, groups, notes, connections, and appearance settings |
+| `update_view` | Update a view's name and/or documentation |
 
 ### Connections
 
 | Tool | Description |
 |------|-------------|
 | `get_connection` | Get visual properties of a connection (bendpoints, colors, line width) |
+| `get_view_connections` | List all connections on a view with relationship details, source/target figures, and bendpoints |
 | `update_connection` | Update bendpoints, line color, line width, font color, or text position on a connection |
 | `delete_connection` | Remove a visual connection from a view (logical relationship is preserved) |
 
@@ -176,6 +185,12 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 |------|-------------|
 | `update_element` | Update name, documentation, custom properties, or ArchiMate type |
 | `get_element_analysis` | Inspect relationships, view usage, and properties |
+
+### Composite
+
+| Tool | Description |
+|------|-------------|
+| `create_sd_overview_view` | Create a complete BIAN SD Overview view with all elements, relationships, figures, connections, and styling in one atomic call |
 
 ### Folders
 
@@ -198,12 +213,14 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `bulk_create_elements` | Create multiple elements in one call (with optional per-item folder) |
-| `bulk_update_elements` | Update multiple elements in one call |
+| `bulk_update_elements` | Update multiple elements in one call (supports type changes with `new_type`) |
 | `bulk_create_relationships` | Create multiple relationships in one call (with optional access type and folder) |
 | `bulk_add_elements_to_view` | Place multiple elements on a view |
 | `bulk_add_relationships_to_view` | Draw multiple connections on a view |
 | `bulk_move_elements_to_folder` | Move multiple elements or relationships to folders |
 | `bulk_move_views_to_folder` | Move multiple views to folders |
+| `bulk_create_views` | Create multiple views in one call (with optional per-item folder and documentation) |
+| `bulk_update_figure_appearance` | Update appearance of multiple figures across views in one call |
 
 ---
 

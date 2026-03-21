@@ -86,12 +86,7 @@ public class MoveElementToFolderTool implements ITool {
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("element_id", element.getId());
-            entry.put("element_name", element.getName());
-            entry.put("folder_id", resolvedTarget.getId());
-            entry.put("folder_name", resolvedTarget.getName());
             entry.put("previous_folder_id", previousFolderId);
-            entry.put("success", true);
             return entry;
         });
 

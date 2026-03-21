@@ -172,12 +172,9 @@ public class DuplicateViewTool implements ITool {
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("new_view_id", newView.getId());
-            entry.put("new_view_name", newView.getName());
-            entry.put("source_view_id", sourceViewId);
             entry.put("folder_id", resolvedFolder.getId());
             entry.put("figure_count", objectMap.size());
             entry.put("connection_count", connectionCount);
-            entry.put("success", true);
             return entry;
         });
 

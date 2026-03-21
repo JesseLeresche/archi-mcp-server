@@ -83,7 +83,6 @@ public class BulkMoveViewsToFolderTool implements ITool {
                     IArchimateDiagramModel view =
                             ModelAccessor.findViewById(model, viewId);
                     if (view == null) {
-                        entry.put("success", false);
                         entry.put("error", "View not found: " + viewId);
                         entries.add(entry);
                         continue;
@@ -92,7 +91,6 @@ public class BulkMoveViewsToFolderTool implements ITool {
                     IFolder targetFolder =
                             ModelAccessor.findFolderById(model, folderId);
                     if (targetFolder == null) {
-                        entry.put("success", false);
                         entry.put("error", "Folder not found: " + folderId);
                         entries.add(entry);
                         continue;
@@ -107,12 +105,7 @@ public class BulkMoveViewsToFolderTool implements ITool {
                     }
                     targetFolder.getElements().add(view);
 
-                    entry.put("view_name", view.getName());
-                    entry.put("folder_id", targetFolder.getId());
-                    entry.put("folder_name", targetFolder.getName());
-                    entry.put("success", true);
                 } catch (Exception e) {
-                    entry.put("success", false);
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
@@ -124,10 +117,6 @@ public class BulkMoveViewsToFolderTool implements ITool {
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
-        response.put("total", results.size());
-        response.put("succeeded", results.stream()
-                .filter(r -> Boolean.TRUE.equals(r.get("success")))
-                .count());
         return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }

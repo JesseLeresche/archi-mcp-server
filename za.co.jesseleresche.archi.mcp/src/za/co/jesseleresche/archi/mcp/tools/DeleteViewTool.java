@@ -62,17 +62,11 @@ public class DeleteViewTool implements ITool {
             throw new Exception("View not found: " + viewId);
         }
 
-        String viewName = view.getName();
-
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             EcoreUtil.delete(view, true);
             IEditorModelManager.INSTANCE.saveModel(model);
 
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("view_id", viewId);
-            entry.put("view_name", viewName);
-            entry.put("success", true);
-            return entry;
+            return new LinkedHashMap<String, Object>();
         });
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

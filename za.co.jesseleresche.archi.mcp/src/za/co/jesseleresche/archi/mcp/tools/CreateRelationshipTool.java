@@ -142,14 +142,7 @@ public class CreateRelationshipTool implements ITool {
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", relationship.getId());
-            entry.put("source_id", sourceId);
-            entry.put("target_id", targetId);
-            entry.put("type", relationship.eClass().getName());
             entry.put("folder_id", folder.getId());
-            if (relationship instanceof IAccessRelationship accessRel) {
-                entry.put("access_type", accessRel.getAccessType());
-            }
-            entry.put("success", true);
             return entry;
         });
 

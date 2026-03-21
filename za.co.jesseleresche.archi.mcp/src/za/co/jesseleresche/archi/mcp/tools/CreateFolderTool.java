@@ -87,9 +87,6 @@ public class CreateFolderTool implements ITool {
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", folder.getId());
-            entry.put("name", folder.getName());
-            entry.put("parent_folder_id", resolvedParent.getId());
-            entry.put("success", true);
             return entry;
         });
 

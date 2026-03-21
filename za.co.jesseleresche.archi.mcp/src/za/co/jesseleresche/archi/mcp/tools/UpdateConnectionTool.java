@@ -1,8 +1,6 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
@@ -141,54 +139,35 @@ public class UpdateConnectionTool implements ITool {
         IDiagramModelArchimateConnection conn = connection;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("connection_id", conn.getId());
-            entry.put("relationship_id", conn.getArchimateRelationship().getId());
-            entry.put("view_id", viewId);
-
             if (bendpointsNode != null && bendpointsNode.isArray()) {
                 conn.getBendpoints().clear();
-                List<Map<String, Integer>> savedBendpoints = new ArrayList<>();
                 for (JsonNode bp : bendpointsNode) {
                     IDiagramModelBendpoint bendpoint =
                             IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
-                    int sx = bp.path("startX").asInt(0);
-                    int sy = bp.path("startY").asInt(0);
-                    int ex = bp.path("endX").asInt(0);
-                    int ey = bp.path("endY").asInt(0);
-                    bendpoint.setStartX(sx);
-                    bendpoint.setStartY(sy);
-                    bendpoint.setEndX(ex);
-                    bendpoint.setEndY(ey);
+                    bendpoint.setStartX(bp.path("startX").asInt(0));
+                    bendpoint.setStartY(bp.path("startY").asInt(0));
+                    bendpoint.setEndX(bp.path("endX").asInt(0));
+                    bendpoint.setEndY(bp.path("endY").asInt(0));
                     conn.getBendpoints().add(bendpoint);
-                    Map<String, Integer> bpEntry = new LinkedHashMap<>();
-                    bpEntry.put("startX", sx);
-                    bpEntry.put("startY", sy);
-                    bpEntry.put("endX", ex);
-                    bpEntry.put("endY", ey);
-                    savedBendpoints.add(bpEntry);
                 }
-                entry.put("bendpoints", savedBendpoints);
             }
             if (lineColor != null) {
                 conn.setLineColor(lineColor);
-                entry.put("line_color", lineColor);
             }
             if (lineWidth != null) {
                 conn.setLineWidth(lineWidth);
-                entry.put("line_width", lineWidth);
             }
             if (fontColor != null) {
                 conn.setFontColor(fontColor);
-                entry.put("font_color", fontColor);
             }
             if (textPosition != null) {
                 conn.setTextPosition(textPosition);
-                entry.put("text_position", textPosition);
             }
 
             IEditorModelManager.INSTANCE.saveModel(model);
-            entry.put("success", true);
+
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("connection_id", conn.getId());
             return entry;
         });
 
