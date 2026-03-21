@@ -63,17 +63,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-*.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.5.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-*.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.5.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-*.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-1.5.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -284,7 +284,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.0.0-SNAPSHOT.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.5.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.

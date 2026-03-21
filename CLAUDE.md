@@ -65,7 +65,7 @@ The target platform resolves Archi and Eclipse dependencies from:
 # Build the plugin JAR (ensure JAVA_HOME points to JDK 21)
 JAVA_HOME="$(/usr/libexec/java_home -v 21)" mvn clean verify
 
-# Output: com.archimatetool.mcp/target/com.archimatetool.mcp-1.0.0-SNAPSHOT.jar
+# Output: za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.5.0.jar
 ```
 
 The `lib/` directory (Jetty + Jackson JARs) is downloaded automatically by `maven-dependency-plugin` during build and is gitignored.
