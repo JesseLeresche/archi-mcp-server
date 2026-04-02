@@ -40,6 +40,9 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Element analysis** — inspect an element's relationships and view usage
 - **Token-efficient responses** — minimal JSON responses (no echoed inputs, no success flags, no derivable counts) to reduce LLM token usage by ~35-40%
 - **View export** — export any view as a PNG image, returned inline via MCP and optionally saved to disk
+- **Auto-layout** — hierarchical directed graph layout for views, with recursive nested container support and automatic container resizing
+- **Model validation** — validate all relationships against the ArchiMate specification, with inline validation on relationship creation
+- **Undo support** — all mutation tools integrate with Eclipse's CommandStack, enabling Ctrl+Z undo in Archi for MCP-driven changes
 - **MCP image content** — tools can return image content blocks natively, enabling visual feedback to AI agents
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
@@ -71,17 +74,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.6.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.7.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.6.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.7.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-1.6.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-1.7.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -177,6 +180,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `remove_figure_from_view` | Remove a visual figure (element, group, or note) from a view without deleting the underlying element |
 | `duplicate_view` | Clone an existing view with all figures, groups, notes, connections, and appearance settings |
 | `update_view` | Update a view's name and/or documentation |
+| `layout_view` | Auto-layout all figures on a view using a hierarchical directed graph algorithm (recursive, handles nested containers) |
 
 ### Connections
 
@@ -193,6 +197,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 |------|-------------|
 | `update_element` | Update name, documentation, custom properties, or ArchiMate type |
 | `get_element_analysis` | Inspect relationships, view usage, and properties |
+| `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives |
 
 ### Export
 
@@ -298,7 +303,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.6.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.7.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.

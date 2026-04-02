@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -94,22 +96,38 @@ public class CreateElementTool implements ITool {
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
-            IArchimateElement element = (IArchimateElement) eObject;
-            element.setName(name);
-            if (documentation != null) {
-                element.setDocumentation(documentation);
-            }
+            final IArchimateElement[] created = {null};
+            final IFolder[] usedFolder = {null};
 
-            IFolder folder = targetFolder != null
-                    ? targetFolder
-                    : model.getDefaultFolderForObject(element);
-            folder.getElements().add(element);
+            Command cmd = new Command("Create Element") {
+                @Override
+                public void execute() {
+                    EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
+                    created[0] = (IArchimateElement) eObject;
+                    created[0].setName(name);
+                    if (documentation != null) {
+                        created[0].setDocumentation(documentation);
+                    }
+
+                    usedFolder[0] = targetFolder != null
+                            ? targetFolder
+                            : model.getDefaultFolderForObject(created[0]);
+                    usedFolder[0].getElements().add(created[0]);
+                }
+
+                @Override
+                public void undo() {
+                    usedFolder[0].getElements().remove(created[0]);
+                }
+            };
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+            if (stack != null) { stack.execute(cmd); } else { cmd.execute(); }
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("id", element.getId());
-            entry.put("folder_id", folder.getId());
+            entry.put("id", created[0].getId());
+            entry.put("folder_id", usedFolder[0].getId());
             return entry;
         });
 

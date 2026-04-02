@@ -5,8 +5,11 @@ import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IAccessRelationship;
@@ -112,6 +115,23 @@ public class CreateRelationshipTool implements ITool {
             throw new Exception("Unknown ArchiMate relationship type: " + typeName);
         }
 
+        if (!ArchimateModelUtils.isValidRelationship(source, target, eClass)) {
+            EClass[] validTypes = ArchimateModelUtils.getValidRelationships(source, target);
+            StringBuilder msg = new StringBuilder();
+            msg.append("Invalid relationship: ").append(eClass.getName())
+                    .append(" is not allowed between ")
+                    .append(source.eClass().getName())
+                    .append(" and ").append(target.eClass().getName());
+            if (validTypes.length > 0) {
+                msg.append(". Valid types: ");
+                for (int i = 0; i < validTypes.length; i++) {
+                    if (i > 0) msg.append(", ");
+                    msg.append(validTypes[i].getName());
+                }
+            }
+            throw new Exception(msg.toString());
+        }
+
         IFolder targetFolder;
         if (folderId != null) {
             targetFolder = ModelAccessor.findFolderById(model, folderId);
@@ -123,26 +143,42 @@ public class CreateRelationshipTool implements ITool {
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
-            IArchimateRelationship relationship = (IArchimateRelationship) eObject;
-            relationship.setSource(source);
-            relationship.setTarget(target);
-            if (name != null) {
-                relationship.setName(name);
-            }
-            if (accessTypeVal != null && relationship instanceof IAccessRelationship accessRel) {
-                accessRel.setAccessType(accessTypeVal);
-            }
+            final IArchimateRelationship[] created = {null};
+            final IFolder[] usedFolder = {null};
 
-            IFolder folder = targetFolder != null
-                    ? targetFolder
-                    : model.getDefaultFolderForObject(relationship);
-            folder.getElements().add(relationship);
+            Command cmd = new Command("Create Relationship") {
+                @Override
+                public void execute() {
+                    EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
+                    created[0] = (IArchimateRelationship) eObject;
+                    created[0].setSource(source);
+                    created[0].setTarget(target);
+                    if (name != null) {
+                        created[0].setName(name);
+                    }
+                    if (accessTypeVal != null && created[0] instanceof IAccessRelationship accessRel) {
+                        accessRel.setAccessType(accessTypeVal);
+                    }
+
+                    usedFolder[0] = targetFolder != null
+                            ? targetFolder
+                            : model.getDefaultFolderForObject(created[0]);
+                    usedFolder[0].getElements().add(created[0]);
+                }
+
+                @Override
+                public void undo() {
+                    usedFolder[0].getElements().remove(created[0]);
+                }
+            };
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+            if (stack != null) { stack.execute(cmd); } else { cmd.execute(); }
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("id", relationship.getId());
-            entry.put("folder_id", folder.getId());
+            entry.put("id", created[0].getId());
+            entry.put("folder_id", usedFolder[0].getId());
             return entry;
         });
 

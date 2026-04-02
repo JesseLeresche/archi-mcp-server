@@ -3,13 +3,15 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
+import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -63,7 +65,30 @@ public class DeleteViewTool implements ITool {
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            EcoreUtil.delete(view, true);
+            final IFolder[] folderHolder = {(IFolder) view.eContainer()};
+            final int[] indexHolder =
+                    {folderHolder[0].getElements().indexOf(view)};
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Delete View") {
+                @Override
+                public void execute() {
+                    folderHolder[0].getElements().remove(view);
+                }
+
+                @Override
+                public void undo() {
+                    folderHolder[0].getElements().add(indexHolder[0], view);
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
+            }
+
             IEditorModelManager.INSTANCE.saveModel(model);
 
             return new LinkedHashMap<String, Object>();

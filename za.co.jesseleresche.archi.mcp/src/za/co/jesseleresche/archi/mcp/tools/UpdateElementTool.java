@@ -1,10 +1,13 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -200,18 +203,70 @@ public class UpdateElementTool implements ITool {
 
         // Standard update (no type change)
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            if (newName != null) {
-                element.setName(newName);
-            }
-            if (newDoc != null) {
-                element.setDocumentation(newDoc);
-            }
+            // Capture old values for undo
+            final String[] oldName = {element.getName()};
+            final String[] oldDoc = {element.getDocumentation()};
+            final Map<String, String> oldPropValues = new HashMap<>();
             if (propsNode != null && propsNode.isArray()) {
                 for (JsonNode propEntry : propsNode) {
-                    setProperty(element,
-                            propEntry.get("key").asText(),
-                            propEntry.get("value").asText());
+                    String key = propEntry.get("key").asText();
+                    boolean found = false;
+                    for (IProperty prop : element.getProperties()) {
+                        if (key.equals(prop.getKey())) {
+                            oldPropValues.put(key, prop.getValue());
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        oldPropValues.put(key, null);
+                    }
                 }
+            }
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Update Element") {
+                @Override
+                public void execute() {
+                    if (newName != null) {
+                        element.setName(newName);
+                    }
+                    if (newDoc != null) {
+                        element.setDocumentation(newDoc);
+                    }
+                    if (propsNode != null && propsNode.isArray()) {
+                        for (JsonNode propEntry : propsNode) {
+                            setProperty(element,
+                                    propEntry.get("key").asText(),
+                                    propEntry.get("value").asText());
+                        }
+                    }
+                }
+
+                @Override
+                public void undo() {
+                    if (newName != null) {
+                        element.setName(oldName[0]);
+                    }
+                    if (newDoc != null) {
+                        element.setDocumentation(oldDoc[0]);
+                    }
+                    for (Map.Entry<String, String> e : oldPropValues.entrySet()) {
+                        if (e.getValue() == null) {
+                            element.getProperties().removeIf(
+                                    p -> e.getKey().equals(p.getKey()));
+                        } else {
+                            setProperty(element, e.getKey(), e.getValue());
+                        }
+                    }
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
             }
 
             IEditorModelManager.INSTANCE.saveModel(model);

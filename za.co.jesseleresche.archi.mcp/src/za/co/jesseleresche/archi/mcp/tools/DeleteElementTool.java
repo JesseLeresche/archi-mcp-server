@@ -5,7 +5,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -14,9 +16,10 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
-import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelConnection;
+import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -112,27 +115,100 @@ public class DeleteElementTool implements ITool {
 
         int[] counts = {relationships.size(), figureCount};
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            // Remove figures from views (connections removed automatically via EcoreUtil.delete)
+            // Capture state for undo: element folder and index
+            final IFolder elementFolder = (IFolder) element.eContainer();
+            final int elementIndex = elementFolder.getElements().indexOf(element);
+
+            // Capture relationship folders/indexes for undo
+            final List<Object[]> relState = new ArrayList<>();
+            for (IArchimateRelationship rel : relationships) {
+                IFolder f = (IFolder) rel.eContainer();
+                relState.add(new Object[]{rel, f, f.getElements().indexOf(rel)});
+            }
+
+            // Capture figure state (parent container, index, connections) for undo
+            final List<Object[]> figState = new ArrayList<>();
             for (IArchimateDiagramModel view : views) {
                 IDiagramModelArchimateObject fig = ModelAccessor.findFigureByElementId(view, elementId);
                 if (fig != null) {
-                    // Remove all source/target connections first
-                    List<IDiagramModelConnection> conns = new ArrayList<>(fig.getSourceConnections());
-                    conns.addAll(fig.getTargetConnections());
-                    for (IDiagramModelConnection conn : conns) {
-                        EcoreUtil.delete(conn, true);
+                    EObject container = fig.eContainer();
+                    int idx = -1;
+                    if (container instanceof IDiagramModelContainer dmc) {
+                        idx = dmc.getChildren().indexOf(fig);
                     }
-                    EcoreUtil.delete(fig, true);
+                    // Capture connections (source and target) with their endpoints
+                    List<Object[]> connState = new ArrayList<>();
+                    for (IDiagramModelConnection conn : new ArrayList<>(fig.getSourceConnections())) {
+                        connState.add(new Object[]{conn, conn.getSource(), conn.getTarget()});
+                    }
+                    for (IDiagramModelConnection conn : new ArrayList<>(fig.getTargetConnections())) {
+                        connState.add(new Object[]{conn, conn.getSource(), conn.getTarget()});
+                    }
+                    figState.add(new Object[]{fig, container, idx, connState});
                 }
             }
 
-            // Remove relationships
-            for (IArchimateRelationship rel : relationships) {
-                EcoreUtil.delete(rel, true);
-            }
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
 
-            // Remove the element itself
-            EcoreUtil.delete(element, true);
+            Command cmd = new Command("Delete Element") {
+                @Override
+                public void execute() {
+                    for (IArchimateDiagramModel view : views) {
+                        IDiagramModelArchimateObject fig = ModelAccessor.findFigureByElementId(view, elementId);
+                        if (fig != null) {
+                            List<IDiagramModelConnection> conns = new ArrayList<>(fig.getSourceConnections());
+                            conns.addAll(fig.getTargetConnections());
+                            for (IDiagramModelConnection conn : conns) {
+                                conn.disconnect();
+                            }
+                            if (fig.eContainer() instanceof IDiagramModelContainer dmc) {
+                                dmc.getChildren().remove(fig);
+                            }
+                        }
+                    }
+                    for (IArchimateRelationship rel : relationships) {
+                        if (rel.eContainer() instanceof IFolder f) {
+                            f.getElements().remove(rel);
+                        }
+                    }
+                    elementFolder.getElements().remove(element);
+                }
+
+                @Override
+                @SuppressWarnings("unchecked")
+                public void undo() {
+                    // Re-add element
+                    elementFolder.getElements().add(
+                            Math.min(elementIndex, elementFolder.getElements().size()), element);
+                    // Re-add relationships
+                    for (Object[] state : relState) {
+                        IArchimateRelationship rel = (IArchimateRelationship) state[0];
+                        IFolder f = (IFolder) state[1];
+                        int idx = (int) state[2];
+                        f.getElements().add(Math.min(idx, f.getElements().size()), rel);
+                    }
+                    // Re-add figures and reconnect connections
+                    for (Object[] state : figState) {
+                        IDiagramModelArchimateObject fig = (IDiagramModelArchimateObject) state[0];
+                        EObject container = (EObject) state[1];
+                        int idx = (int) state[2];
+                        if (container instanceof IDiagramModelContainer dmc) {
+                            dmc.getChildren().add(Math.min(idx, dmc.getChildren().size()), fig);
+                        }
+                        List<Object[]> connStates = (List<Object[]>) state[3];
+                        for (Object[] cs : connStates) {
+                            IDiagramModelConnection conn = (IDiagramModelConnection) cs[0];
+                            conn.reconnect();
+                        }
+                    }
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
+            }
 
             IEditorModelManager.INSTANCE.saveModel(model);
 

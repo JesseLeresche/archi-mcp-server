@@ -58,6 +58,8 @@ public class ToolRegistry {
         register(new BulkUpdateFigureAppearanceTool());
         register(new CreateSdOverviewViewTool());
         register(new ExportViewAsImageTool());
+        register(new ValidateModelTool());
+        register(new LayoutViewTool());
     }
 
     private void register(ITool tool) {

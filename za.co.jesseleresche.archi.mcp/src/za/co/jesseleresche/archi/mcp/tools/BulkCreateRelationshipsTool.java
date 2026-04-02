@@ -9,6 +9,7 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IAccessRelationship;
@@ -112,6 +113,14 @@ public class BulkCreateRelationshipsTool implements ITool {
                     EClass eClass = ModelAccessor.resolveRelationshipClass(typeName);
                     if (eClass == null) {
                         entry.put("error", "Unknown relationship type: " + typeName);
+                        entries.add(entry);
+                        continue;
+                    }
+
+                    if (!ArchimateModelUtils.isValidRelationship(source, target, eClass)) {
+                        entry.put("error", "Invalid relationship: " + eClass.getName()
+                                + " not allowed between " + source.eClass().getName()
+                                + " and " + target.eClass().getName());
                         entries.add(entry);
                         continue;
                     }

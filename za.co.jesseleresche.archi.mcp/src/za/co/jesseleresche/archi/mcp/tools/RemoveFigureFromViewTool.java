@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -13,6 +15,7 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelConnection;
+import com.archimatetool.model.IDiagramModelContainer;
 import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -99,15 +102,39 @@ public class RemoveFigureFromViewTool implements ITool {
         IDiagramModelObject resolved = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            // Remove all source/target connections first to avoid orphaned connections
-            List<IDiagramModelConnection> conns = new ArrayList<>(resolved.getSourceConnections());
-            conns.addAll(resolved.getTargetConnections());
-            for (IDiagramModelConnection conn : conns) {
-                EcoreUtil.delete(conn, true);
-            }
+            final IDiagramModelContainer[] parentHolder =
+                    {(IDiagramModelContainer) resolved.eContainer()};
+            final int[] indexHolder =
+                    {parentHolder[0].getChildren().indexOf(resolved)};
 
-            // Now remove the figure itself
-            EcoreUtil.delete(resolved, true);
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Remove Figure from View") {
+                @Override
+                public void execute() {
+                    // Remove all source/target connections first to avoid orphaned connections
+                    List<IDiagramModelConnection> conns =
+                            new ArrayList<>(resolved.getSourceConnections());
+                    conns.addAll(resolved.getTargetConnections());
+                    for (IDiagramModelConnection conn : conns) {
+                        EcoreUtil.delete(conn, true);
+                    }
+
+                    // Now remove the figure itself
+                    EcoreUtil.delete(resolved, true);
+                }
+
+                @Override
+                public void undo() {
+                    parentHolder[0].getChildren().add(indexHolder[0], resolved);
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
+            }
 
             IEditorModelManager.INSTANCE.saveModel(model);
 

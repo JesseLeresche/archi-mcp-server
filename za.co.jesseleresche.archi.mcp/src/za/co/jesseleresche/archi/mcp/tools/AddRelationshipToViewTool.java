@@ -3,6 +3,9 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
+
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -143,23 +146,46 @@ public class AddRelationshipToViewTool implements ITool {
 
         // Step 7: Create connection on UI thread
         // CRITICAL: Use connection.connect(source, target) - NEVER view.getChildren().add(connection)
+        final IDiagramModelArchimateConnection[] connectionHolder = {null};
+
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             IDiagramModelArchimateConnection connection =
                     IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
             connection.setArchimateRelationship(relationship);
-            connection.connect(sourceFigure, targetFigure);
 
-            if (bendpointsNode != null && bendpointsNode.isArray()) {
-                for (JsonNode bp : bendpointsNode) {
-                    IDiagramModelBendpoint bendpoint =
-                            IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
-                    bendpoint.setStartX(bp.path("startX").asInt(0));
-                    bendpoint.setStartY(bp.path("startY").asInt(0));
-                    bendpoint.setEndX(bp.path("endX").asInt(0));
-                    bendpoint.setEndY(bp.path("endY").asInt(0));
-                    connection.getBendpoints().add(bendpoint);
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Add Relationship to View") {
+                @Override
+                public void execute() {
+                    connection.connect(sourceFigure, targetFigure);
+
+                    if (bendpointsNode != null && bendpointsNode.isArray()) {
+                        for (JsonNode bp : bendpointsNode) {
+                            IDiagramModelBendpoint bendpoint =
+                                    IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
+                            bendpoint.setStartX(bp.path("startX").asInt(0));
+                            bendpoint.setStartY(bp.path("startY").asInt(0));
+                            bendpoint.setEndX(bp.path("endX").asInt(0));
+                            bendpoint.setEndY(bp.path("endY").asInt(0));
+                            connection.getBendpoints().add(bendpoint);
+                        }
+                    }
                 }
+
+                @Override
+                public void undo() {
+                    connection.disconnect();
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
             }
+
+            connectionHolder[0] = connection;
 
             IEditorModelManager.INSTANCE.saveModel(model);
 

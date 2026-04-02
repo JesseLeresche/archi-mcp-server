@@ -3,7 +3,8 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -11,6 +12,7 @@ import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -99,7 +101,31 @@ public class DeleteConnectionTool implements ITool {
         IDiagramModelArchimateConnection conn = connection;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            EcoreUtil.delete(conn, true);
+            final IDiagramModelObject[] sourceHolder =
+                    {(IDiagramModelObject) conn.getSource()};
+            final IDiagramModelObject[] targetHolder =
+                    {(IDiagramModelObject) conn.getTarget()};
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Delete Connection") {
+                @Override
+                public void execute() {
+                    conn.disconnect();
+                }
+
+                @Override
+                public void undo() {
+                    conn.connect(sourceHolder[0], targetHolder[0]);
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
+            }
+
             IEditorModelManager.INSTANCE.saveModel(model);
 
             return new LinkedHashMap<String, Object>();

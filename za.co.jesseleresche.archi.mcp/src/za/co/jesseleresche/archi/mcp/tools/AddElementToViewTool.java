@@ -3,6 +3,9 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
+
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -122,22 +125,36 @@ public class AddElementToViewTool implements ITool {
         }
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            IDiagramModelArchimateObject figure =
-                    IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
-            figure.setArchimateElement(element);
+            final IDiagramModelArchimateObject[] created = {null};
 
-            IBounds bounds = IArchimateFactory.eINSTANCE.createBounds();
-            bounds.setX(x);
-            bounds.setY(y);
-            bounds.setWidth(width);
-            bounds.setHeight(height);
-            figure.setBounds(bounds);
+            Command cmd = new Command("Add Element to View") {
+                @Override
+                public void execute() {
+                    created[0] = IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
+                    created[0].setArchimateElement(element);
 
-            parentContainer.getChildren().add(figure);
+                    IBounds bounds = IArchimateFactory.eINSTANCE.createBounds();
+                    bounds.setX(x);
+                    bounds.setY(y);
+                    bounds.setWidth(width);
+                    bounds.setHeight(height);
+                    created[0].setBounds(bounds);
+
+                    parentContainer.getChildren().add(created[0]);
+                }
+
+                @Override
+                public void undo() {
+                    parentContainer.getChildren().remove(created[0]);
+                }
+            };
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+            if (stack != null) { stack.execute(cmd); } else { cmd.execute(); }
             IEditorModelManager.INSTANCE.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("figure_id", figure.getId());
+            entry.put("figure_id", created[0].getId());
             return entry;
         });
 
