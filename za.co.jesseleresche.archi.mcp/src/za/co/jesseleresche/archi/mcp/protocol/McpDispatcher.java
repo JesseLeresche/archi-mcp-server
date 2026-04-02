@@ -1,5 +1,7 @@
 package za.co.jesseleresche.archi.mcp.protocol;
 
+import java.util.List;
+
 import za.co.jesseleresche.archi.mcp.tools.ITool;
 import za.co.jesseleresche.archi.mcp.tools.ToolRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -83,14 +85,13 @@ public class McpDispatcher {
         JsonNode arguments = params.has("arguments") ? params.get("arguments") : MAPPER.createObjectNode();
 
         try {
-            String resultString = tool.execute(arguments);
+            List<ObjectNode> contentBlocks = tool.executeWithContent(arguments);
 
             ObjectNode result = MAPPER.createObjectNode();
             ArrayNode content = MAPPER.createArrayNode();
-            ObjectNode textContent = MAPPER.createObjectNode();
-            textContent.put("type", "text");
-            textContent.put("text", resultString);
-            content.add(textContent);
+            for (ObjectNode block : contentBlocks) {
+                content.add(block);
+            }
             result.set("content", content);
 
             return McpResponse.success(request.getId(), result);

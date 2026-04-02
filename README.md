@@ -6,6 +6,12 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 **No additional software required.** Unlike many MCP servers that require Node.js, Python, or a separate process to be running, this plugin is a single JAR that installs directly into Archi. Drop it in the `plugins/` folder, restart Archi, and it's ready — nothing else to install or configure.
 
+## Architecture
+
+> *This diagram was created, exported, and added to this README automatically by Claude Code using the Archi MCP Plugin.*
+
+![Archi MCP Plugin — Application Composition](docs/archi-mcp-application-composition.png)
+
 ## Features
 
 - **No extra dependencies** — single JAR bundles everything (Jetty 11 + Jackson); no Node.js, Python, or sidecar process needed
@@ -33,6 +39,8 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **BIAN SD Overview composite** — create a complete BIAN Service Domain Overview view (elements, relationships, figures, connections, styling) in one atomic call
 - **Element analysis** — inspect an element's relationships and view usage
 - **Token-efficient responses** — minimal JSON responses (no echoed inputs, no success flags, no derivable counts) to reduce LLM token usage by ~35-40%
+- **View export** — export any view as a PNG image, returned inline via MCP and optionally saved to disk
+- **MCP image content** — tools can return image content blocks natively, enabling visual feedback to AI agents
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
 ## Tested With
@@ -63,17 +71,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.5.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.6.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.5.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.6.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-1.5.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-1.6.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -186,6 +194,12 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `update_element` | Update name, documentation, custom properties, or ArchiMate type |
 | `get_element_analysis` | Inspect relationships, view usage, and properties |
 
+### Export
+
+| Tool | Description |
+|------|-------------|
+| `export_view_as_image` | Export a view as a PNG image (returned inline and optionally saved to disk) |
+
 ### Composite
 
 | Tool | Description |
@@ -284,7 +298,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.5.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.6.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
