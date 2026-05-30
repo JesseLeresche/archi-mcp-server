@@ -57,6 +57,7 @@ public class ToolRegistry {
         register(new BulkCreateViewsTool());
         register(new BulkUpdateFigureAppearanceTool());
         register(new CreateSdOverviewViewTool());
+        register(new BulkCreateSdOverviewViewsTool());
         register(new ExportViewAsImageTool());
         register(new ValidateModelTool());
         register(new LayoutViewTool());

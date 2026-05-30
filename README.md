@@ -37,6 +37,7 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **View editing** — update a view's name and documentation after creation
 - **Connection inspection** — list all connections on a view with routing, bendpoints, and access types
 - **BIAN SD Overview composite** — create a complete BIAN Service Domain Overview view (elements, relationships, figures, connections, styling) in one atomic call
+- **Bulk BIAN SD Overview** — create many SD Overview views in a single call with shared folder defaults and per-item success/error results
 - **Element analysis** — inspect an element's relationships and view usage
 - **Token-efficient responses** — minimal JSON responses (no echoed inputs, no success flags, no derivable counts) to reduce LLM token usage by ~35-40%
 - **View export** — export any view as a PNG image, returned inline via MCP and optionally saved to disk
@@ -74,17 +75,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.7.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.8.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.7.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.8.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-1.7.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-1.8.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -210,6 +211,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `create_sd_overview_view` | Create a complete BIAN SD Overview view with all elements, relationships, figures, connections, and styling in one atomic call |
+| `bulk_create_sd_overview_views` | Create multiple BIAN SD Overview views in one call, with shared `view_folder_id`/`element_folder_id` defaults (overridable per item) and per-item success/error results |
 
 ### Folders
 
@@ -303,7 +305,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.7.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.8.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
