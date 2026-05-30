@@ -31,6 +31,7 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Connection management** — update or delete visual connections on views
 - **Access relationship support** — set access type (Read, Write, ReadWrite) on access relationships
 - **Bulk operations** — create, update, or move multiple elements, relationships, or views in a single call
+- **Relationship editing** — change a logical relationship's type (preserving its ID and view connections) or delete it without touching endpoints, with bulk variants for spec-compliance sweeps
 - **Bulk type change** — change the ArchiMate type of multiple elements in one call, preserving all references
 - **Bulk view creation** — create multiple views in a single call
 - **Bulk figure styling** — update appearance of multiple figures across views in one call
@@ -75,17 +76,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.8.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.9.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.8.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-1.9.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-1.8.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-1.9.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -197,6 +198,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `update_element` | Update name, documentation, custom properties, or ArchiMate type |
+| `update_relationship` | Update a logical relationship (type, name, documentation, access type, properties, folder); type changes preserve the ID and view connections |
 | `get_element_analysis` | Inspect relationships, view usage, and properties |
 | `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives |
 
@@ -227,6 +229,7 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | Tool | Description |
 |------|-------------|
 | `delete_element` | Delete an element and its relationships (cascade) |
+| `delete_relationship` | Delete a single logical relationship and its visual connections (endpoints untouched) |
 | `delete_view` | Delete a diagram view |
 
 ### Bulk Operations
@@ -236,6 +239,8 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 | `bulk_create_elements` | Create multiple elements in one call (with optional per-item folder) |
 | `bulk_update_elements` | Update multiple elements in one call (supports type changes with `new_type`) |
 | `bulk_create_relationships` | Create multiple relationships in one call (with optional access type and folder) |
+| `bulk_update_relationships` | Update multiple relationships in one call (including type changes that preserve ID and view connections) |
+| `bulk_delete_relationships` | Delete multiple logical relationships in one call (with their visual connections) |
 | `bulk_add_elements_to_view` | Place multiple elements on a view |
 | `bulk_add_relationships_to_view` | Draw multiple connections on a view |
 | `bulk_move_elements_to_folder` | Move multiple elements or relationships to folders |
@@ -305,7 +310,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.8.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.9.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.

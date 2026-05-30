@@ -38,6 +38,8 @@ public class ToolRegistry {
         register(new BulkCreateElementsTool());
         register(new BulkUpdateElementsTool());
         register(new BulkCreateRelationshipsTool());
+        register(new UpdateRelationshipTool());
+        register(new BulkUpdateRelationshipsTool());
         register(new BulkAddElementsToViewTool());
         register(new BulkAddRelationshipsToViewTool());
         register(new MoveElementToFolderTool());
@@ -45,6 +47,8 @@ public class ToolRegistry {
         register(new MoveViewToFolderTool());
         register(new BulkMoveViewsToFolderTool());
         register(new DeleteConnectionTool());
+        register(new DeleteRelationshipTool());
+        register(new BulkDeleteRelationshipsTool());
         register(new UpdateConnectionTool());
         register(new GetViewLayoutTool());
         register(new RemoveFigureFromViewTool());
