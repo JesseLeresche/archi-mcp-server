@@ -76,17 +76,17 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.9.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-1.9.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /opt/Archi/plugins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-1.9.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-2.0.0.jar "C:\Program Files\Archi\plugins\"
    ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -148,105 +148,50 @@ Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP conn
 
 ## Available Tools
 
-### Model Management
+As of **v2.0.0** the tools are consolidated by domain entity. Each `manage_*` tool takes an
+`operation` discriminator plus an `items` payload that accepts **either a single object or an
+array** (batch) — a single object is treated as a one-item batch. Write tools return a uniform
+`{ "results": [ … ] }` with a per-item success or error entry. This replaces the former
+~45 single/`bulk_*` tools and dramatically shrinks the `tools/list` payload.
+
+> **Migration from v1.x:** the old per-operation tool names (`create_element`, `bulk_create_elements`,
+> `add_element_to_view`, `delete_view`, …) were removed. Use the consolidated tools below — e.g.
+> `create_element` → `manage_elements` with `operation: "create"`; `bulk_add_elements_to_view`
+> → `manage_view_content` with `operation: "add_element"`.
+
+### Model session & querying
 
 | Tool | Description |
 |------|-------------|
-| `list_models` | List all open models with selection status |
-| `select_model` | Switch active model by name or ID |
-
-### Querying
-
-| Tool | Description |
-|------|-------------|
+| `manage_models` | `operation: list \| select` — list open models, or switch the active model by name/ID |
 | `query_model` | Filter elements by ArchiMate type, layer, name, or folder |
 | `get_views` | List diagram views with element, group, and note counts |
 
-### Authoring
+### Authoring & editing (write)
+
+| Tool | Operations | Description |
+|------|-----------|-------------|
+| `manage_elements` | `create / update / delete` | Element CRUD. Update supports type changes (`new_type`); delete supports `dry_run` |
+| `manage_relationships` | `create / update / delete` | Relationship CRUD. Type changes preserve ID and view connections; delete supports `dry_run` |
+| `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections |
+| `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level) |
+| `manage_folders` | `create / move_element / move_view / list_contents / tree` | Create folders, move elements/relationships/views, and inspect the folder hierarchy |
+| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment) or auto-layout a view |
+
+### Inspection & analysis (read)
 
 | Tool | Description |
 |------|-------------|
-| `create_element` | Create an ArchiMate element (optionally in a specific folder) |
-| `create_relationship` | Create a relationship between two elements (with optional access type and folder) |
-| `create_view` | Create an empty diagram view |
-| `create_folder` | Create a folder or subfolder |
-
-### Visual Layout & Appearance
-
-| Tool | Description |
-|------|-------------|
-| `add_element_to_view` | Place an element as a figure on a view (optionally inside a group or parent) |
-| `add_relationship_to_view` | Draw a visual connection for a relationship |
-| `update_figure_appearance` | Set fill color, font color, line color, opacity, or line width on any figure (elements, groups, notes) |
-| `get_view_layout` | Return position and size of all figures on a view, including nested elements, groups, and notes |
-| `remove_figure_from_view` | Remove a visual figure (element, group, or note) from a view without deleting the underlying element |
-| `duplicate_view` | Clone an existing view with all figures, groups, notes, connections, and appearance settings |
-| `update_view` | Update a view's name and/or documentation |
-| `layout_view` | Auto-layout all figures on a view using a hierarchical directed graph algorithm (recursive, handles nested containers) |
-
-### Connections
-
-| Tool | Description |
-|------|-------------|
-| `get_connection` | Get visual properties of a connection (bendpoints, colors, line width) |
-| `get_view_connections` | List all connections on a view with relationship details, source/target figures, and bendpoints |
-| `update_connection` | Update bendpoints, line color, line width, font color, or text position on a connection |
-| `delete_connection` | Remove a visual connection from a view (logical relationship is preserved) |
-
-### Properties & Analysis
-
-| Tool | Description |
-|------|-------------|
-| `update_element` | Update name, documentation, custom properties, or ArchiMate type |
-| `update_relationship` | Update a logical relationship (type, name, documentation, access type, properties, folder); type changes preserve the ID and view connections |
-| `get_element_analysis` | Inspect relationships, view usage, and properties |
+| `inspect_view` | `operation: layout \| connections \| get_connection` — figure positions/sizes, connections on a view, or one connection's visual properties |
+| `get_element_analysis` | Inspect an element's relationships, view usage, and properties |
 | `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives |
 
-### Export
+### Export & composite
 
 | Tool | Description |
 |------|-------------|
 | `export_view_as_image` | Export a view as a PNG image (returned inline and optionally saved to disk) |
-
-### Composite
-
-| Tool | Description |
-|------|-------------|
 | `create_sd_overview_view` | Create a complete BIAN SD Overview view with all elements, relationships, figures, connections, and styling in one atomic call |
-| `bulk_create_sd_overview_views` | Create multiple BIAN SD Overview views in one call, with shared `view_folder_id`/`element_folder_id` defaults (overridable per item) and per-item success/error results |
-
-### Folders
-
-| Tool | Description |
-|------|-------------|
-| `get_folder_tree` | Get the complete folder hierarchy (optionally filtered by section) |
-| `list_folder_contents` | List elements, relationships, views, and subfolders in a folder |
-| `move_element_to_folder` | Move an element to a different folder |
-| `move_view_to_folder` | Move a diagram view to a different folder |
-
-### Deletion
-
-| Tool | Description |
-|------|-------------|
-| `delete_element` | Delete an element and its relationships (cascade) |
-| `delete_relationship` | Delete a single logical relationship and its visual connections (endpoints untouched) |
-| `delete_view` | Delete a diagram view |
-
-### Bulk Operations
-
-| Tool | Description |
-|------|-------------|
-| `bulk_create_elements` | Create multiple elements in one call (with optional per-item folder) |
-| `bulk_update_elements` | Update multiple elements in one call (supports type changes with `new_type`) |
-| `bulk_create_relationships` | Create multiple relationships in one call (with optional access type and folder) |
-| `bulk_update_relationships` | Update multiple relationships in one call (including type changes that preserve ID and view connections) |
-| `bulk_delete_relationships` | Delete multiple logical relationships in one call (with their visual connections) |
-| `bulk_add_elements_to_view` | Place multiple elements on a view |
-| `bulk_add_relationships_to_view` | Draw multiple connections on a view |
-| `bulk_move_elements_to_folder` | Move multiple elements or relationships to folders |
-| `bulk_move_views_to_folder` | Move multiple views to folders |
-| `bulk_create_views` | Create multiple views in one call (with optional per-item folder and documentation) |
-| `bulk_update_figure_appearance` | Update appearance of multiple figures across views in one call |
 
 ---
 
@@ -310,7 +255,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.9.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.0.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.

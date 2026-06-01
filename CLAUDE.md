@@ -33,21 +33,39 @@ Activator → McpServerManager → McpServer (Jetty)
 - **All mutations** must run inside `UiThreadUtil.syncExec()` (Eclipse UI thread)
 - Jetty must bind to `127.0.0.1` only, never `0.0.0.0`
 
-### MCP Tools
+### MCP Tools (consolidated in v2.0.0)
 
-| Tool | Purpose |
-|------|---------|
-| `query_model` | List/filter elements by type, layer, or name |
-| `get_views` | List diagram views, optionally with element IDs |
-| `create_element` | Create an ArchiMate element in the model |
-| `create_relationship` | Create a relationship between two elements |
-| `create_view` | Create an empty diagram view |
-| `add_element_to_view` | Place an element as a visual figure on a view |
-| `add_relationship_to_view` | Draw a visual connection for an existing relationship |
+Since v2.0.0 the tools are grouped by domain entity. Each `manage_*` tool takes an `operation`
+discriminator plus an `items` payload (a single object **or** an array for batch) and returns a
+uniform `{ "results": [...] }`. The 14 registered tools are:
+
+| Tool | Operations / Purpose |
+|------|----------------------|
+| `manage_models` | `list` / `select` |
+| `query_model` | List/filter elements by type, layer, name, or folder |
+| `get_views` | List diagram views with element/group/note counts |
+| `manage_elements` | `create` / `update` / `delete` |
+| `manage_relationships` | `create` / `update` / `delete` |
+| `manage_views` | `create` / `update` / `delete` / `duplicate` |
+| `manage_view_content` | `add_element` / `add_relationship` / `remove_figure` / `update_connection` / `delete_connection` |
+| `manage_folders` | `create` / `move_element` / `move_view` / `list_contents` / `tree` |
+| `manage_appearance` | `set_figure` / `layout_view` |
+| `inspect_view` | `layout` / `connections` / `get_connection` (read-only) |
+| `get_element_analysis` | Inspect an element's relationships, view usage, properties |
+| `validate_model` | Validate relationships against the ArchiMate spec |
+| `export_view_as_image` | Export a view as a PNG (inline + optional disk save) |
+| `create_sd_overview_view` | Build a complete BIAN SD Overview view atomically |
+
+**Consolidation architecture:** the `manage_*` tools (`ManageElementsTool`, etc.) extend
+`ConsolidatedTool` and are **pure routing** — they reshape arguments and delegate to the existing
+per-operation tool classes (e.g. `BulkCreateElementsTool`, `UpdateConnectionTool`), which remain in
+the codebase as internal helpers. Those classes still own the EMF mutation logic and `syncExec`
+wrapping, so consolidated tools must **never** wrap delegate calls in their own `syncExec`.
 
 ### Important Patterns
 
 - All `ITool.execute()` methods return a JSON string (serialized via Jackson) and throw `Exception` on failure
+- Consolidated `manage_*` tools delegate to per-operation tool classes; do not reimplement model logic in them
 - Element/relationship type resolution is case-insensitive against `IArchimatePackage.eINSTANCE`
 - Visual connections use `connection.connect(source, target)` — never manually add to `view.getChildren()`
 - `ModelAccessor.getOpenModel()` returns the first open model or `null`
@@ -65,7 +83,7 @@ The target platform resolves Archi and Eclipse dependencies from:
 # Build the plugin JAR (ensure JAVA_HOME points to JDK 21)
 JAVA_HOME="$(/usr/libexec/java_home -v 21)" mvn clean verify
 
-# Output: za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-1.9.0.jar
+# Output: za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.0.0.jar
 ```
 
 The `lib/` directory (Jetty + Jackson JARs) is downloaded automatically by `maven-dependency-plugin` during build and is gitignored.

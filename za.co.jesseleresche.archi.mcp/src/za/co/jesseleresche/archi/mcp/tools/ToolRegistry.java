@@ -20,51 +20,27 @@ public class ToolRegistry {
     private final Map<String, ITool> tools = new LinkedHashMap<>();
 
     public ToolRegistry() {
-        register(new ListModelsTool());
-        register(new SelectModelTool());
+        // Model session & querying
+        register(new ManageModelsTool());
         register(new QueryModelTool());
         register(new GetViewsTool());
-        register(new CreateElementTool());
-        register(new CreateRelationshipTool());
-        register(new CreateViewTool());
-        register(new AddElementToViewTool());
-        register(new AddRelationshipToViewTool());
-        register(new UpdateFigureAppearanceTool());
-        register(new UpdateElementTool());
+
+        // Consolidated CRUD / content tools (operation + items convention)
+        register(new ManageElementsTool());
+        register(new ManageRelationshipsTool());
+        register(new ManageViewsTool());
+        register(new ManageViewContentTool());
+        register(new ManageFoldersTool());
+        register(new ManageAppearanceTool());
+
+        // Read-only inspection & analysis
+        register(new InspectViewTool());
         register(new GetElementAnalysisTool());
-        register(new DeleteViewTool());
-        register(new DeleteElementTool());
-        register(new CreateFolderTool());
-        register(new BulkCreateElementsTool());
-        register(new BulkUpdateElementsTool());
-        register(new BulkCreateRelationshipsTool());
-        register(new UpdateRelationshipTool());
-        register(new BulkUpdateRelationshipsTool());
-        register(new BulkAddElementsToViewTool());
-        register(new BulkAddRelationshipsToViewTool());
-        register(new MoveElementToFolderTool());
-        register(new BulkMoveElementsToFolderTool());
-        register(new MoveViewToFolderTool());
-        register(new BulkMoveViewsToFolderTool());
-        register(new DeleteConnectionTool());
-        register(new DeleteRelationshipTool());
-        register(new BulkDeleteRelationshipsTool());
-        register(new UpdateConnectionTool());
-        register(new GetViewLayoutTool());
-        register(new RemoveFigureFromViewTool());
-        register(new ListFolderContentsTool());
-        register(new GetFolderTreeTool());
-        register(new GetConnectionTool());
-        register(new GetViewConnectionsTool());
-        register(new DuplicateViewTool());
-        register(new UpdateViewTool());
-        register(new BulkCreateViewsTool());
-        register(new BulkUpdateFigureAppearanceTool());
-        register(new CreateSdOverviewViewTool());
-        register(new BulkCreateSdOverviewViewsTool());
-        register(new ExportViewAsImageTool());
         register(new ValidateModelTool());
-        register(new LayoutViewTool());
+
+        // Specialised / standalone
+        register(new ExportViewAsImageTool());
+        register(new CreateSdOverviewViewTool());
     }
 
     private void register(ITool tool) {

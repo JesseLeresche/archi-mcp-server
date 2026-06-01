@@ -25,13 +25,14 @@ MCP Client (Claude Code / GitHub Copilot / Copilot Studio)
 │  ├── initialize / initialized                │
 │  ├── tools/list                              │
 │  └── tools/call → Tool Handlers             │
-│       ├── query_model                        │
-│       ├── get_views                          │
-│       ├── create_element                     │
-│       ├── create_relationship                │
-│       ├── create_view                        │
-│       ├── add_element_to_view               │
-│       └── add_relationship_to_view          │
+│       ├── manage_models / query_model        │
+│       ├── get_views / inspect_view           │
+│       ├── manage_elements                    │
+│       ├── manage_relationships               │
+│       ├── manage_views                       │
+│       ├── manage_view_content                │
+│       ├── manage_folders / manage_appearance │
+│       └── validate_model / export / sd_view  │
 │                                              │
 │  EMF Model Access (Archi Java API)           │
 └──────────────────────────────────────────────┘
@@ -444,6 +445,14 @@ public class ToolRegistry {
 
 All tools access the model via `ModelAccessor.getOpenModel()`. All mutation operations
 must be wrapped in `UiThreadUtil.syncExec(() -> { ... })`.
+
+> **v2.0.0 consolidation note.** The per-operation classes documented below remain in the
+> codebase and still own the model logic, but they are no longer registered individually.
+> The public MCP surface is now ~14 consolidated tools (`manage_elements`, `manage_views`,
+> `manage_view_content`, …) that take an `operation` discriminator plus an `items` payload
+> (single object or array) and **delegate** to these classes. See `CLAUDE.md` / `README.md`
+> for the current tool list and `ConsolidatedTool` for the delegation pattern. The sections
+> below therefore describe the *operations* available within the consolidated tools.
 
 ### QueryModelTool — `query_model`
 
