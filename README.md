@@ -4,7 +4,7 @@
 
 An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implements the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) over HTTP. Once installed, it starts an embedded MCP server on `localhost:7432` that lets any MCP-compliant AI assistant read and modify your open ArchiMate models in real time.
 
-**No additional software required.** Unlike many MCP servers that require Node.js, Python, or a separate process to be running, this plugin is a single JAR that installs directly into Archi. Drop it in the `plugins/` folder, restart Archi, and it's ready — nothing else to install or configure.
+**No additional software required.** Unlike many MCP servers that require Node.js, Python, or a separate process to be running, this plugin is a single JAR that installs directly into Archi. Drop it in the `dropins/` folder, restart Archi, and it's ready — nothing else to install or configure.
 
 ## Architecture
 
@@ -72,22 +72,32 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 1. Download the latest JAR from the [Releases page](https://github.com/JesseLeresche/archi-mcp-server/releases).
 
-2. Copy it into Archi's `plugins/` directory:
+2. Copy it into Archi's `dropins/` directory:
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/plugins/
+   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /opt/Archi/plugins/
+   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /opt/Archi/dropins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-2.0.0.jar "C:\Program Files\Archi\plugins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-2.0.0.jar "C:\Program Files\Archi\dropins\"
    ```
+
+   > **Upgrading from an earlier version?** Delete any existing
+   > `za.co.jesseleresche.archi.mcp-*.jar` from `dropins/` **before** copying the new one.
+   > The plugin is a singleton OSGi bundle — if multiple versions are present, Archi may load
+   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.0.0.jar`
+   > should remain. For example, on macOS:
+   > ```bash
+   > rm /Applications/Archi.app/Contents/Eclipse/dropins/za.co.jesseleresche.archi.mcp-*.jar
+   > cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   > ```
 
 3. Restart Archi. The MCP server starts automatically.
 
@@ -262,7 +272,7 @@ Jetty and Jackson JARs are downloaded automatically into `lib/` during the build
 
 ### 3. Install
 
-Copy the built JAR to Archi's `plugins/` directory (see [Installation](#installation) above) and restart Archi.
+Copy the built JAR to Archi's `dropins/` directory (see [Installation](#installation) above) and restart Archi.
 
 ---
 
