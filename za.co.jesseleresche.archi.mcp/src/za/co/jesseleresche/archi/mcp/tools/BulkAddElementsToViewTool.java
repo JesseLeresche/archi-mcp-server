@@ -5,6 +5,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.gef.commands.Command;
+import org.eclipse.gef.commands.CommandStack;
+import org.eclipse.gef.commands.CompoundCommand;
+
 import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -14,6 +18,8 @@ import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IDiagramModelObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -64,6 +70,11 @@ public class BulkAddElementsToViewTool implements ITool {
         ObjectNode height = itemProps.putObject("height");
         height.put("type", "integer");
         height.put("default", 55);
+        ObjectNode parentFigureId = itemProps.putObject("parent_figure_id");
+        parentFigureId.put("type", "string");
+        parentFigureId.put("description",
+                "Optional: ID of a parent figure (group or element) on this view to nest this "
+                        + "element inside. When set, x/y are relative to the parent's client area.");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("element_id");
 
@@ -94,6 +105,11 @@ public class BulkAddElementsToViewTool implements ITool {
 
         List<Map<String, Object>> results = UiThreadUtil.syncExec(() -> {
             List<Map<String, Object>> entries = new ArrayList<>();
+            // Pair each validated figure with its target container, then commit them all
+            // through a single CompoundCommand so a batch add undoes in one step.
+            List<IDiagramModelArchimateObject> figures = new ArrayList<>();
+            List<IDiagramModelContainer> containers = new ArrayList<>();
+            List<Map<String, Object>> figureEntries = new ArrayList<>();
 
             for (JsonNode item : figuresNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
@@ -107,6 +123,29 @@ public class BulkAddElementsToViewTool implements ITool {
                         continue;
                     }
 
+                    // Resolve the target container. When parent_figure_id is supplied it must
+                    // exist on this view and be a container; otherwise fail explicitly rather
+                    // than silently falling back to top-level placement.
+                    IDiagramModelContainer parentContainer = view;
+                    if (item.hasNonNull("parent_figure_id")) {
+                        String parentFigureId = item.get("parent_figure_id").asText();
+                        IDiagramModelObject parentObj =
+                                ModelAccessor.findDiagramObjectById(view, parentFigureId);
+                        if (parentObj == null) {
+                            entry.put("error", "Parent figure not found on view: " + parentFigureId);
+                            entries.add(entry);
+                            continue;
+                        }
+                        if (!(parentObj instanceof IDiagramModelContainer)) {
+                            entry.put("error",
+                                    "Parent figure is not a container (cannot hold children): "
+                                            + parentFigureId);
+                            entries.add(entry);
+                            continue;
+                        }
+                        parentContainer = (IDiagramModelContainer) parentObj;
+                    }
+
                     int x = item.path("x").asInt(50);
                     int y = item.path("y").asInt(50);
                     int w = item.path("width").asInt(120);
@@ -116,21 +155,51 @@ public class BulkAddElementsToViewTool implements ITool {
                             IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
                     figure.setArchimateElement(element);
                     IBounds bounds = IArchimateFactory.eINSTANCE.createBounds();
+                    // x/y are parent-relative when nesting; absolute canvas coords at top level.
                     bounds.setX(x);
                     bounds.setY(y);
                     bounds.setWidth(w);
                     bounds.setHeight(h);
                     figure.setBounds(bounds);
-                    view.getChildren().add(figure);
 
-                    entry.put("figure_id", figure.getId());
+                    figures.add(figure);
+                    containers.add(parentContainer);
+                    // figure_id is assigned once the figure is added to the model (below).
+                    figureEntries.add(entry);
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());
                 }
                 entries.add(entry);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            if (!figures.isEmpty()) {
+                CompoundCommand compound = new CompoundCommand("Add Elements to View");
+                for (int i = 0; i < figures.size(); i++) {
+                    final IDiagramModelArchimateObject figure = figures.get(i);
+                    final IDiagramModelContainer container = containers.get(i);
+                    compound.add(new Command("Add Element to View") {
+                        @Override
+                        public void execute() {
+                            container.getChildren().add(figure);
+                        }
+
+                        @Override
+                        public void undo() {
+                            container.getChildren().remove(figure);
+                        }
+                    });
+                }
+
+                CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+                if (stack != null) { stack.execute(compound); } else { compound.execute(); }
+
+                // IDs are assigned when the figures join the model, so read them now.
+                for (int i = 0; i < figures.size(); i++) {
+                    figureEntries.get(i).put("figure_id", figures.get(i).getId());
+                }
+                IEditorModelManager.INSTANCE.saveModel(model);
+            }
+
             return entries;
         });
 

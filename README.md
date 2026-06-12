@@ -76,27 +76,27 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.0.1.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.0.jar /opt/Archi/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.0.1.jar /opt/Archi/dropins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-2.0.0.jar "C:\Program Files\Archi\dropins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-2.0.1.jar "C:\Program Files\Archi\dropins\"
    ```
 
    > **Upgrading from an earlier version?** Delete any existing
    > `za.co.jesseleresche.archi.mcp-*.jar` from `dropins/` **before** copying the new one.
    > The plugin is a singleton OSGi bundle — if multiple versions are present, Archi may load
-   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.0.0.jar`
+   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.0.1.jar`
    > should remain. For example, on macOS:
    > ```bash
    > rm /Applications/Archi.app/Contents/Eclipse/dropins/za.co.jesseleresche.archi.mcp-*.jar
-   > cp za.co.jesseleresche.archi.mcp-2.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   > cp za.co.jesseleresche.archi.mcp-2.0.1.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    > ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -265,7 +265,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.0.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.0.1.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
