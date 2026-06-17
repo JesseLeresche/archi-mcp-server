@@ -76,7 +76,7 @@ public class BulkCreateViewsTool implements ITool {
             for (JsonNode item : viewsNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
-                    String name = item.get("name").asText();
+                    String name = ConsolidatedTool.requireText(item, "name");
                     String folderId = item.has("folder_id")
                             ? item.get("folder_id").asText() : null;
                     String documentation = item.has("documentation")

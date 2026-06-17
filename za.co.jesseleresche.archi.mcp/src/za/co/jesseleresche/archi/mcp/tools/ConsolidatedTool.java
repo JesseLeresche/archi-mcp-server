@@ -40,6 +40,23 @@ abstract class ConsolidatedTool implements ITool {
         if (items == null || items.isNull()) {
             throw new Exception("'items' is required (a single object or an array)");
         }
+        // Some MCP clients encode the structured 'items' payload as a JSON string
+        // (a TextNode) rather than a JSON object/array. Unwrap it so per-item field
+        // lookups work for both encodings.
+        if (items.isTextual()) {
+            String raw = items.asText().trim();
+            if (raw.isEmpty()) {
+                throw new Exception("'items' is required (a single object or an array)");
+            }
+            try {
+                items = MAPPER.readTree(raw);
+            } catch (Exception e) {
+                throw new Exception("'items' is a string but not valid JSON: " + e.getMessage());
+            }
+            if (items == null || items.isNull()) {
+                throw new Exception("'items' is required (a single object or an array)");
+            }
+        }
         List<JsonNode> list = new ArrayList<>();
         if (items.isArray()) {
             if (items.isEmpty()) {
@@ -79,6 +96,19 @@ abstract class ConsolidatedTool implements ITool {
         ObjectNode response = MAPPER.createObjectNode();
         response.set("results", results);
         return MAPPER.writeValueAsString(response);
+    }
+
+    /**
+     * Read a required text field from an item, throwing a clear message (rather than a
+     * blind {@code NullPointerException} from {@code get(field).asText()}) when it is
+     * absent or null. Shared by the bulk delegate tools.
+     */
+    static String requireText(JsonNode item, String field) throws Exception {
+        JsonNode n = item == null ? null : item.get(field);
+        if (n == null || n.isNull()) {
+            throw new Exception("missing required field '" + field + "'");
+        }
+        return n.asText();
     }
 
     /** Coerce a bare string item into {@code {key: value}}; pass objects through unchanged. */

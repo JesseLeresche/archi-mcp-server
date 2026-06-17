@@ -82,8 +82,8 @@ public class BulkCreateElementsTool implements ITool {
             for (JsonNode item : elementsNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
-                    String name = item.get("name").asText();
-                    String typeName = item.get("type").asText();
+                    String name = ConsolidatedTool.requireText(item, "name");
+                    String typeName = ConsolidatedTool.requireText(item, "type");
                     String documentation = item.has("documentation") ? item.get("documentation").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
 

@@ -89,9 +89,9 @@ public class BulkCreateRelationshipsTool implements ITool {
             for (JsonNode item : relsNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
-                    String sourceId = item.get("source_id").asText();
-                    String targetId = item.get("target_id").asText();
-                    String typeName = item.get("type").asText();
+                    String sourceId = ConsolidatedTool.requireText(item, "source_id");
+                    String targetId = ConsolidatedTool.requireText(item, "target_id");
+                    String typeName = ConsolidatedTool.requireText(item, "type");
                     String name = item.has("name") ? item.get("name").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
                     Integer accessTypeVal = item.has("access_type") ? item.get("access_type").asInt() : null;
