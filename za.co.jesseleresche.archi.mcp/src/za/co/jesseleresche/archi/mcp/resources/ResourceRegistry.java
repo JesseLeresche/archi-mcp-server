@@ -59,6 +59,41 @@ public class ResourceRegistry {
                 "/resources/guides/layered-view-agent-guide.md"
         ));
 
+        list.add(new ResourceDescriptor(
+                "archi://guides/application-structure-view",
+                "Application Structure View — Agent Generation Guide",
+                "Complete guide for creating ArchiMate Application Structure Views: decomposing "
+                        + "a composite Application Component into sub-components, element types, "
+                        + "relationship rules, nesting, styling, MCP tool-call sequence, and a "
+                        + "worked example. Fetch this resource before creating an Application "
+                        + "Structure View.",
+                "text/markdown",
+                "/resources/guides/application-structure-view-agent-guide.md"
+        ));
+
+        list.add(new ResourceDescriptor(
+                "archi://guides/data-model-view",
+                "Data Model View — Agent Generation Guide",
+                "Complete guide for creating ArchiMate Data Model Views: nesting Data Objects "
+                        + "inside a parent store, element types, relationship rules, styling, "
+                        + "MCP tool-call sequence, and a worked example. Fetch this resource "
+                        + "before creating a Data Model View.",
+                "text/markdown",
+                "/resources/guides/data-model-view-agent-guide.md"
+        ));
+
+        list.add(new ResourceDescriptor(
+                "archi://guides/infrastructure-view",
+                "Infrastructure View — Agent Generation Guide",
+                "Complete guide for creating ArchiMate Infrastructure Views: Node composition "
+                        + "from System Software and Device parts, realization of Technology "
+                        + "Services and Artifacts, element types, relationship rules, styling, "
+                        + "MCP tool-call sequence, and a worked example. Fetch this resource "
+                        + "before creating an Infrastructure View.",
+                "text/markdown",
+                "/resources/guides/infrastructure-view-agent-guide.md"
+        ));
+
         RESOURCES = Collections.unmodifiableList(list);
     }
 

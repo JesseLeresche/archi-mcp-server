@@ -30,10 +30,13 @@ public class ManageViewsTool extends ConsolidatedTool {
                 + "update: {view_id, name?, documentation?}; "
                 + "delete: {view_id}; "
                 + "duplicate: {source_view_id, new_name, target_folder_id?}. "
-                + "IMPORTANT: before creating a Layered View, fetch the design guide first via "
-                + "resources/read with URI 'archi://guides/layered-view'. It defines the correct "
-                + "layer structure, element types, relationship rules, layout positions, styling, "
-                + "and MCP tool-call sequence to follow.";
+                + "IMPORTANT: before creating one of the standard view types below, fetch its design "
+                + "guide first via resources/read — each defines the correct element types, "
+                + "relationship rules, nesting/layout, styling, and MCP tool-call sequence to follow: "
+                + "Layered View → 'archi://guides/layered-view'; "
+                + "Application Structure View → 'archi://guides/application-structure-view'; "
+                + "Data Model View → 'archi://guides/data-model-view'; "
+                + "Infrastructure View → 'archi://guides/infrastructure-view'.";
     }
 
     @Override
