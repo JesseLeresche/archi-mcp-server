@@ -17,8 +17,11 @@ com.archimatetool.mcp/lib/
 *.iml
 out/
 
-# Claude Code
+# AI Agents
 .claude/
+.kiro
+.junie
+.ai
 
 # OS
 .DS_Store

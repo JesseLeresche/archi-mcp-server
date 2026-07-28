@@ -50,6 +50,47 @@ Keep changes focused. A pull request should do one thing. If you find unrelated 
 - Bulk operations must handle per-item errors without failing the whole batch
 - Return `{success: true/false, error: "..."}` shaped results consistently
 
+**Adding a new view type guide:**
+
+The plugin exposes MCP **Resources** — bundled Markdown guides that teach an AI agent how to
+correctly build a specific *kind* of ArchiMate view (e.g. a Layered View or a Data Model View):
+which element types to use, which relationships are valid and in which direction, how to nest and
+style figures, and the exact `manage_*` tool-call sequence to follow. An agent fetches the
+relevant guide via `resources/read` before it starts building that view type, instead of guessing.
+
+This is designed to be extensible — adding support for a new view type is a docs-plus-wiring
+change, not new tool code:
+
+1. **Write the guide.** Copy [`docs/view-guide-template.md`](../docs/view-guide-template.md) to
+   `za.co.jesseleresche.archi.mcp/src/resources/guides/{view-type}-view-agent-guide.md` and fill
+   in every section. The template's blockquote hints explain what belongs in each section; the
+   existing guides (`layered-view-agent-guide.md`, `data-model-view-agent-guide.md`,
+   `application-structure-view-agent-guide.md`, `infrastructure-view-agent-guide.md`) are the best
+   reference for level of detail — a new guide should be as prescriptive as those.
+
+2. **Register it as a resource.** Add a `ResourceDescriptor` entry in
+   `za.co.jesseleresche.archi.mcp/src/za/co/jesseleresche/archi/mcp/resources/ResourceRegistry.java`:
+   ```java
+   list.add(new ResourceDescriptor(
+           "archi://guides/{view-type}-view",
+           "{View Type} View — Agent Generation Guide",
+           "One-line description shown in resources/list — what the view is for and when to fetch it.",
+           "text/markdown",
+           "/resources/guides/{view-type}-view-agent-guide.md"
+   ));
+   ```
+   The `classpathPath` must match where Tycho places the file on the plugin's classpath — it
+   mirrors the `src/resources/...` path.
+
+3. **Point agents at it.** Add a hint to the description of whichever tool creates that view type
+   (usually `ManageViewsTool.getDescription()`) telling the agent to fetch the guide first via
+   `resources/read` with the URI from step 2 — follow the existing pattern in
+   `ManageViewsTool.java`, which lists all four current guides.
+
+4. **Build and verify.** After `mvn clean verify`, confirm the guide is reachable: start Archi
+   with the plugin installed and call `resources/list` (it should include your new URI) and
+   `resources/read` with that URI (it should return your Markdown content).
+
 ### 4. Build and verify
 
 ```bash

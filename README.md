@@ -205,6 +205,28 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 
 ---
 
+## MCP Resources (Agent Guides)
+
+In addition to tools, the plugin exposes MCP **Resources** — bundled Markdown design guides that
+walk an AI agent through building a specific *kind* of ArchiMate view correctly: which element
+types to use, which relationships are valid and in which direction, how to nest and style figures,
+and the exact tool-call sequence to follow. Clients discover them with `resources/list` and fetch
+their content with `resources/read`; `manage_views`' tool description tells agents which guide to
+fetch before creating each of the view types below.
+
+| URI | Guide |
+|-----|-------|
+| `archi://guides/layered-view` | Layered View — full stack, layer-by-layer (external actors → business → application → technology) |
+| `archi://guides/application-structure-view` | Application Structure View — decomposing a composite Application Component into sub-components |
+| `archi://guides/data-model-view` | Data Model View — a logical data store modeled as nested Data Objects |
+| `archi://guides/infrastructure-view` | Infrastructure View — a Node's System Software/Device composition and what it realizes |
+
+Want to add a guide for another view type? See [Adding a new view type
+guide](CONTRIBUTING.md#adding-a-new-view-type-guide) in CONTRIBUTING.md, and start from
+[`docs/view-guide-template.md`](docs/view-guide-template.md).
+
+---
+
 ## HTTP Endpoints
 
 | Endpoint | Method | Purpose |

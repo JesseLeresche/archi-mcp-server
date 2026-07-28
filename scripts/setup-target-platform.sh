@@ -42,6 +42,15 @@ else
 fi
 
 echo "Archi plugins directory: $PLUGINS_DIR"
+echo "Counting files to process..."
+
+# Count total files first
+TOTAL_FILES=$(find "$PLUGINS_DIR" -maxdepth 1 -type f -name "*.jar" | wc -l)
+TOTAL_DIRS=$(find "$PLUGINS_DIR" -maxdepth 1 -type d ! -name "plugins" | wc -l)
+TOTAL=$((TOTAL_FILES + TOTAL_DIRS))
+
+echo "Found $TOTAL_FILES JAR files and $TOTAL_DIRS directories to process"
+echo "Starting installation..."
 echo ""
 
 # Extract Bundle-SymbolicName from a MANIFEST.MF file
@@ -57,9 +66,13 @@ get_bundle_symbolic_name() {
 
 INSTALLED=0
 SKIPPED=0
+PROCESSED=0
 
 for entry in "$PLUGINS_DIR"/*; do
     basename="$(basename "$entry")"
+    PROCESSED=$((PROCESSED + 1))
+
+    echo "[$PROCESSED/$TOTAL] Processing: $basename"
 
     # Skip non-bundle entries
     if [[ "$basename" == *.source_* ]] || [[ "$basename" == *.feature_* ]]; then
