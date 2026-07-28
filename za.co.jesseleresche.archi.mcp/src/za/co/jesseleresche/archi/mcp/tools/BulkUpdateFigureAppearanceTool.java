@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import com.archimatetool.model.IBounds;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -31,7 +32,7 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
         return "Update visual appearance of multiple figures in a single call. "
                 + "Each entry targets a specific figure on a specific view. "
                 + "Supports fill color, font color, line color, opacity, "
-                + "line width, and text alignment.";
+                + "line width, text alignment, x/y position, and width/height.";
     }
 
     @Override
@@ -75,6 +76,14 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
         alignEnum.add(1);
         alignEnum.add(2);
         alignEnum.add(4);
+        ObjectNode x = itemProps.putObject("x");
+        x.put("type", "integer");
+        ObjectNode y = itemProps.putObject("y");
+        y.put("type", "integer");
+        ObjectNode width = itemProps.putObject("width");
+        width.put("type", "integer");
+        ObjectNode height = itemProps.putObject("height");
+        height.put("type", "integer");
 
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("view_id");
@@ -164,6 +173,22 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                     if (item.has("text_alignment")) {
                         fig.setTextAlignment(
                                 item.get("text_alignment").asInt());
+                    }
+                    if (item.has("x") || item.has("y") || item.has("width") || item.has("height")) {
+                        IBounds bounds = fig.getBounds();
+                        if (item.has("x")) {
+                            bounds.setX(item.get("x").asInt());
+                        }
+                        if (item.has("y")) {
+                            bounds.setY(item.get("y").asInt());
+                        }
+                        if (item.has("width")) {
+                            bounds.setWidth(item.get("width").asInt());
+                        }
+                        if (item.has("height")) {
+                            bounds.setHeight(item.get("height").asInt());
+                        }
+                        fig.setBounds(bounds);
                     }
 
                     entry.put("figure_id", fig.getId());

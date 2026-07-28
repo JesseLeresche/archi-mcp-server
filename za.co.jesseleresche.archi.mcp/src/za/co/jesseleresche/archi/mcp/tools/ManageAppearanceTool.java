@@ -22,7 +22,7 @@ public class ManageAppearanceTool extends ConsolidatedTool {
     public String getDescription() {
         return "Style figures or auto-layout a view. Set 'operation'. Fields by operation — "
                 + "set_figure: items (single object or array) {view_id, figure_id?|element_id?, "
-                + "fill_color?, line_color?, font_color?, opacity?, line_width?, text_alignment?}; "
+                + "fill_color?, line_color?, font_color?, opacity?, line_width?, text_alignment?, x?, y?, width?, height?}; "
                 + "layout_view: {view_id, spacing?}.";
     }
 
