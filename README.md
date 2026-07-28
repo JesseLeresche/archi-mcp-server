@@ -21,6 +21,7 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Type change** — change an element's ArchiMate type while preserving all relationships and view references
 - **Visual layout** — place elements on views (including inside groups), draw connections, set positions and sizes
 - **Appearance control** — change fill color, font color, line color, opacity, and line width
+- **Figure repositioning** — move and resize existing figures on a view by setting `x`/`y`/`width`/`height` via `manage_appearance`
 - **Property management** — update names, documentation, and custom key/value properties
 - **Folder browsing** — get folder tree hierarchy, list folder contents (elements, relationships, views)
 - **Folder management** — create folders and move elements, relationships, and views between folders
@@ -46,6 +47,7 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 - **Model validation** — validate all relationships against the ArchiMate specification, with inline validation on relationship creation
 - **Undo support** — all mutation tools integrate with Eclipse's CommandStack, enabling Ctrl+Z undo in Archi for MCP-driven changes
 - **MCP image content** — tools can return image content blocks natively, enabling visual feedback to AI agents
+- **MCP Resources (agent guides)** — bundled Markdown design guides for standard view types (layered, application structure, data model, infrastructure), discoverable via `resources/list` and fetched with `resources/read`
 - **Dual MCP transport** — SSE (Claude Code, VS Code Copilot) and Streamable HTTP (Copilot Studio)
 
 ## Tested With
@@ -76,27 +78,27 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.2.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.1.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.0.2.jar /opt/Archi/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.1.0.jar /opt/Archi/dropins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-2.0.2.jar "C:\Program Files\Archi\dropins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-2.1.0.jar "C:\Program Files\Archi\dropins\"
    ```
 
    > **Upgrading from an earlier version?** Delete any existing
    > `za.co.jesseleresche.archi.mcp-*.jar` from `dropins/` **before** copying the new one.
    > The plugin is a singleton OSGi bundle — if multiple versions are present, Archi may load
-   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.0.2.jar`
+   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.1.0.jar`
    > should remain. For example, on macOS:
    > ```bash
    > rm /Applications/Archi.app/Contents/Eclipse/dropins/za.co.jesseleresche.archi.mcp-*.jar
-   > cp za.co.jesseleresche.archi.mcp-2.0.2.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   > cp za.co.jesseleresche.archi.mcp-2.1.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    > ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -186,7 +188,7 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 | `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections |
 | `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level) |
 | `manage_folders` | `create / move_element / move_view / list_contents / tree` | Create folders, move elements/relationships/views, and inspect the folder hierarchy |
-| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment) or auto-layout a view |
+| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment), reposition/resize them (`x`/`y`/`width`/`height`), or auto-layout a view |
 
 ### Inspection & analysis (read)
 
@@ -287,7 +289,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.0.2.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.1.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
