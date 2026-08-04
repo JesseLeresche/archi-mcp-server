@@ -6,6 +6,17 @@ Thank you for your interest in contributing. This guide covers everything you ne
 
 Before you begin, make sure you can build the project locally. Follow the **Building Locally** section in the [README](README.md).
 
+### Set up the pre-commit hook
+
+This repo uses [pre-commit](https://pre-commit.com/) to run a `gitleaks` secret scan before every local commit — install it once per clone:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Unlike an npm-based project, there's no automatic enrollment here (no `package.json` lifecycle script to hook into) — you need to run both commands yourself, once, after cloning. Skip a single commit with `git commit --no-verify` if you need to. See [`docs/ci-cd.md`](docs/ci-cd.md) for what the hook actually checks and why.
+
 ## Workflow
 
 All contributions go through a feature branch and pull request. Direct commits to `main` are not permitted.

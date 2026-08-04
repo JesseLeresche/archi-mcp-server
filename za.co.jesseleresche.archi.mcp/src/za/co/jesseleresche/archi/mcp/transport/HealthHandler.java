@@ -34,7 +34,6 @@ public class HealthHandler extends HttpServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.setHeader("Access-Control-Allow-Origin", "*");
 
         IArchimateModel model = ModelAccessor.getOpenModel();
 
