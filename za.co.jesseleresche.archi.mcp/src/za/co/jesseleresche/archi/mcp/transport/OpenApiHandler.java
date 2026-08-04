@@ -43,7 +43,6 @@ public class OpenApiHandler extends HttpServlet {
 
         response.setContentType("application/yaml");
         response.setCharacterEncoding("UTF-8");
-        response.setHeader("Access-Control-Allow-Origin", "*");
 
         response.getWriter().write(OPENAPI_YAML);
     }
