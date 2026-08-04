@@ -1,0 +1,23 @@
+# Local pre-commit checks. Install once per clone:
+#   pip install pre-commit && pre-commit install
+# Skip a single commit with: git commit --no-verify
+#
+# gitleaks-system (not the golang/docker variants) assumes gitleaks is already on
+# PATH rather than building it from source or pulling a container image on every
+# run — same "assume the tool's installed" approach as camunda-mcp's Husky hook.
+# Install: winget install --id Gitleaks.Gitleaks (Windows) / brew install gitleaks (macOS).
+#
+# No Maven-based check here: even a warm `mvn clean verify` isn't fast enough for
+# commit-time, and there's nothing else fast to check yet (no test suite, no
+# linter configured). Trivy's dependency-vuln scan and Semgrep's SAST stay
+# CI-only in security.yml for the same reason as camunda-mcp — too slow for a
+# commit-time hook (DB download / container pull).
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks-system
+        name: gitleaks
+        description: Detect hardcoded secrets in staged changes
+        entry: gitleaks git --pre-commit --redact --staged --verbose
+        language: system
+        pass_filenames: false

@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch: {}
+
+env:
+  ARCHI_VERSION: '5.9.0'
+
+# A push to a branch with an open PR fires both `push` and `pull_request:synchronize`
+# for the same commit, which would otherwise run this workflow twice. Group by the
+# commit SHA so the second run cancels the first. `github.sha` on a `pull_request`
+# event is a synthetic merge commit, not the branch's head commit, so we prefer
+# `github.event.pull_request.head.sha` (falling back to `github.sha` for push /
+# workflow_dispatch) to line both events up on the same key.
+concurrency:
+  group: ci-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@d7793b545071e98d581d3bf084a51c3213318a07 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # The Tycho target platform (target-platform/archi-mcp.target) points at a real
+      # Archi installation directory rather than a p2 repo, so CI needs a real Archi
+      # build to resolve against. Archi is an Eclipse RCP app distributed as a plain
+      # tarball (no installer), so we can just download and unpack it. `-Darchi.dir`
+      # (documented in the README) is not actually wired to anything — confirmed by
+      # testing locally — so the checked-out target file's path is rewritten directly
+      # here instead, in this job's own checkout only. Never committed back.
+      - name: Download and extract Archi ${{ env.ARCHI_VERSION }} (Linux)
+        run: |
+          curl -fsSL -o archi.tgz \
+            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_VERSION}/Archi-Linux64-${ARCHI_VERSION}.tgz"
+          mkdir -p "$RUNNER_TEMP/archi"
+          tar -xzf archi.tgz -C "$RUNNER_TEMP/archi"
+          ARCHI_DIR="$(dirname "$(find "$RUNNER_TEMP/archi" -maxdepth 3 -type d -name plugins | head -n1)")"
+          if [ -z "$ARCHI_DIR" ]; then
+            echo "Could not locate plugins/ directory inside the extracted Archi archive" >&2
+            exit 1
+          fi
+          echo "ARCHI_DIR=$ARCHI_DIR" >> "$GITHUB_ENV"
+
+      - name: Point target platform at the downloaded Archi
+        run: |
+          sed -i "s#\(<location path=\"\)[^\"]*\(\" type=\"Directory\"/>\)#\1${ARCHI_DIR}\2#" target-platform/archi-mcp.target
+
+      # scripts/setup-target-platform.sh shells out to a fresh `mvn install:install-file`
+      # process per bundle in Archi's plugins/ directory (hundreds of them) — a
+      # confirmed ~10-20 minute cost from a cold cache, dominated by repeated Maven JVM
+      # boot overhead rather than real work. Caching the seeded local repo, keyed on
+      # the pinned Archi version, means only the first run (or a version bump) pays
+      # that cost; every run after is fast — a real local `mvn clean verify` against an
+      # already-warm repo completed in ~30s.
+      - name: Cache local Maven repository (seeded Archi bundles)
+        id: maven-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.m2/repository
+          key: maven-repo-archi-${{ env.ARCHI_VERSION }}
+
+      - name: Seed local Maven repo from Archi bundles
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        run: bash scripts/setup-target-platform.sh "$ARCHI_DIR"
+
+      - name: Build
+        run: mvn -B clean verify
