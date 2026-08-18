@@ -18,6 +18,28 @@
 
     <build>
         <plugins>
+            <!--
+                lib/ is a generated directory (Maven-downloaded, not source-controlled), but
+                nothing in the standard build lifecycle empties it — mvn clean only clears
+                target/. Without this, every dependency version bump leaves the previous
+                version's jars behind; build.properties' bin.includes then bundles the whole
+                lib/ directory into the packaged plugin jar, shipping dead prior-version
+                copies alongside the current ones. Binding a clean here means every
+                `mvn clean verify` starts lib/ from zero.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.basedir}/lib</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+
             <!-- Download Jetty + Jackson JARs into lib/ before compilation -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
