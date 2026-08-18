@@ -15,7 +15,7 @@
     <properties>
         <tycho.version>5.0.2</tycho.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jetty.version>11.0.20</jetty.version>
+        <jetty.version>11.0.26</jetty.version>
         <jakarta.servlet.version>5.0.0</jakarta.servlet.version>
         <jackson.version>2.18.2</jackson.version>
         <slf4j.version>2.0.9</slf4j.version>
