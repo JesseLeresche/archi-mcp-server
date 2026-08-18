@@ -19,9 +19,9 @@ Bundle-ClassPath: .,
  lib/jetty-io-11.0.26.jar,
  lib/jetty-security-11.0.26.jar,
  lib/jakarta.servlet-api-5.0.0.jar,
- lib/jackson-databind-2.22.2.jar,
- lib/jackson-core-2.22.2.jar,
- lib/jackson-annotations-2.22.2.jar,
+ lib/jackson-databind-2.19.4.jar,
+ lib/jackson-core-2.19.4.jar,
+ lib/jackson-annotations-2.19.4.jar,
  lib/slf4j-api-2.0.9.jar,
  lib/slf4j-simple-2.0.9.jar
 Export-Package: za.co.jesseleresche.archi.mcp
