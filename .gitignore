@@ -3,7 +3,7 @@
 **/bin/
 
 # Bundled libs (downloaded by Maven)
-com.archimatetool.mcp/lib/
+za.co.jesseleresche.archi.mcp/lib/
 
 # Eclipse IDE
 .metadata/
