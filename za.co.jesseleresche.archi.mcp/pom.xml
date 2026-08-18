@@ -32,15 +32,15 @@
                         </goals>
                         <configuration>
                             <artifactItems>
-                                <!-- Jetty 11 -->
+                                <!-- Jetty 12 (EE11 / Servlet 6.1) -->
                                 <artifactItem>
                                     <groupId>org.eclipse.jetty</groupId>
                                     <artifactId>jetty-server</artifactId>
                                     <version>${jetty.version}</version>
                                 </artifactItem>
                                 <artifactItem>
-                                    <groupId>org.eclipse.jetty</groupId>
-                                    <artifactId>jetty-servlet</artifactId>
+                                    <groupId>org.eclipse.jetty.ee11</groupId>
+                                    <artifactId>jetty-ee11-servlet</artifactId>
                                     <version>${jetty.version}</version>
                                 </artifactItem>
                                 <artifactItem>
@@ -61,6 +61,11 @@
                                 <artifactItem>
                                     <groupId>org.eclipse.jetty</groupId>
                                     <artifactId>jetty-security</artifactId>
+                                    <version>${jetty.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.eclipse.jetty</groupId>
+                                    <artifactId>jetty-session</artifactId>
                                     <version>${jetty.version}</version>
                                 </artifactItem>
                                 <artifactItem>
