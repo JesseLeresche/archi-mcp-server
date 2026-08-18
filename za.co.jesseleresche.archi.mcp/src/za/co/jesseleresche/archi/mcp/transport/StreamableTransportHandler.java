@@ -33,8 +33,6 @@ public class StreamableTransportHandler extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
 
-        response.setHeader("Access-Control-Allow-Origin", "*");
-
         String body = new String(request.getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8);
 
@@ -64,7 +62,6 @@ public class StreamableTransportHandler extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
         response.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id");
         response.setStatus(204);
@@ -75,7 +72,6 @@ public class StreamableTransportHandler extends HttpServlet {
         response.setStatus(status);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.setHeader("Access-Control-Allow-Origin", "*");
         ObjectMapperHolder.get().writeValue(response.getWriter(), body);
     }
 }
