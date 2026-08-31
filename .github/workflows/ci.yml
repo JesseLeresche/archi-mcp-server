@@ -45,8 +45,12 @@ jobs:
       # here instead, in this job's own checkout only. Never committed back.
       - name: Download and extract Archi ${{ env.ARCHI_VERSION }} (Linux)
         run: |
+          # The archi.io release tag uses underscores (e.g. 5_9_0) while the asset
+          # filename keeps dots (Archi-Linux64-5.9.0.tgz). Derive the tag form from
+          # ARCHI_VERSION so the single source of truth stays the dotted version.
+          ARCHI_TAG="${ARCHI_VERSION//./_}"
           curl -fsSL -o archi.tgz \
-            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_VERSION}/Archi-Linux64-${ARCHI_VERSION}.tgz"
+            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_TAG}/Archi-Linux64-${ARCHI_VERSION}.tgz"
           mkdir -p "$RUNNER_TEMP/archi"
           tar -xzf archi.tgz -C "$RUNNER_TEMP/archi"
           ARCHI_DIR="$(dirname "$(find "$RUNNER_TEMP/archi" -maxdepth 3 -type d -name plugins | head -n1)")"
