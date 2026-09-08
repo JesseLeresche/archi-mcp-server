@@ -72,7 +72,7 @@ public class ValidateModelTool implements ITool {
                 violation.put("target_type", rel.getTarget().eClass().getName());
 
                 // Include valid alternatives
-                EClass[] validTypes = ArchimateModelUtils.getValidRelationships(
+                List<EClass> validTypes = ArchimateModelUtils.getValidRelationships(
                         rel.getSource(), rel.getTarget());
                 List<String> validNames = new ArrayList<>();
                 for (EClass ec : validTypes) {
