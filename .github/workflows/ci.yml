@@ -9,7 +9,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  ARCHI_VERSION: '5.9.0'
+  ARCHI_VERSION: '5.10.0'
 
 # A push to a branch with an open PR fires both `push` and `pull_request:synchronize`
 # for the same commit, which would otherwise run this workflow twice. Group by the
