@@ -14,7 +14,7 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 ## Features
 
-- **No extra dependencies** — single JAR bundles everything (Jetty 11 + Jackson); no Node.js, Python, or sidecar process needed
+- **No extra dependencies** — single JAR bundles everything (Jetty 12 + Jackson); no Node.js, Python, or sidecar process needed
 - **Multi-model support** — list all open models and switch between them
 - **Query & filter** — search elements by type, layer, or name
 - **Full model authoring** — create elements, relationships, views, and folders with optional folder placement

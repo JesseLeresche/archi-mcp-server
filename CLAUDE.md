@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Archi MCP Plugin — a single Eclipse OSGi plugin JAR for [Archi](https://www.archimatetool.com/) that implements the **Model Context Protocol (MCP)** over HTTP. When installed in Archi, it starts an embedded Jetty 11 HTTP server on `localhost:7432` that speaks MCP (JSON-RPC 2.0) to any compliant client (Claude Code, GitHub Copilot, Copilot Studio).
+Archi MCP Plugin — a single Eclipse OSGi plugin JAR for [Archi](https://www.archimatetool.com/) that implements the **Model Context Protocol (MCP)** over HTTP. When installed in Archi, it starts an embedded Jetty 12 HTTP server on `localhost:7432` that speaks MCP (JSON-RPC 2.0) to any compliant client (Claude Code, GitHub Copilot, Copilot Studio).
 
 The full specification lives in `REQUIREMENTS.md`.
 
 ## Architecture
 
 - **OSGi Plugin**: Bundle ID `com.archimatetool.mcp`, activator-started, targets JavaSE-21
-- **Embedded Jetty 11 + Jackson**: Bundled in `lib/` (downloaded by Maven). All listed in `Bundle-ClassPath` in MANIFEST.MF.
+- **Embedded Jetty 12 (EE11 / Servlet 6.1) + Jackson**: Bundled in `lib/` (downloaded by Maven). All listed in `Bundle-ClassPath` in MANIFEST.MF.
 - **Two MCP transports**:
   - **SSE** (`GET /sse` + `POST /message?sessionId=`) — for Claude Code and GitHub Copilot VS Code
   - **Streamable HTTP** (`POST /mcp`) — for Copilot Studio
