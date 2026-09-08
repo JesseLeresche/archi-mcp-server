@@ -1,6 +1,7 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.emf.ecore.EClass;
@@ -116,17 +117,17 @@ public class CreateRelationshipTool implements ITool {
         }
 
         if (!ArchimateModelUtils.isValidRelationship(source, target, eClass)) {
-            EClass[] validTypes = ArchimateModelUtils.getValidRelationships(source, target);
+            List<EClass> validTypes = ArchimateModelUtils.getValidRelationships(source, target);
             StringBuilder msg = new StringBuilder();
             msg.append("Invalid relationship: ").append(eClass.getName())
                     .append(" is not allowed between ")
                     .append(source.eClass().getName())
                     .append(" and ").append(target.eClass().getName());
-            if (validTypes.length > 0) {
+            if (!validTypes.isEmpty()) {
                 msg.append(". Valid types: ");
-                for (int i = 0; i < validTypes.length; i++) {
+                for (int i = 0; i < validTypes.size(); i++) {
                     if (i > 0) msg.append(", ");
-                    msg.append(validTypes[i].getName());
+                    msg.append(validTypes.get(i).getName());
                 }
             }
             throw new Exception(msg.toString());
