@@ -9,7 +9,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  ARCHI_VERSION: '5.9.0'
+  ARCHI_VERSION: '5.10.0'
 
 # A push to a branch with an open PR fires both `push` and `pull_request:synchronize`
 # for the same commit, which would otherwise run this workflow twice. Group by the
@@ -45,8 +45,13 @@ jobs:
       # here instead, in this job's own checkout only. Never committed back.
       - name: Download and extract Archi ${{ env.ARCHI_VERSION }} (Linux)
         run: |
+          # archi.io releases tag with underscores (e.g. 5_10_0) while asset
+          # filenames keep dots (e.g. Archi-Linux64-5.10.0.tgz) — and the repo
+          # only keeps the latest release, so old version tags 404 once a new
+          # version ships.
+          ARCHI_TAG="${ARCHI_VERSION//./_}"
           curl -fsSL -o archi.tgz \
-            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_VERSION}/Archi-Linux64-${ARCHI_VERSION}.tgz"
+            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_TAG}/Archi-Linux64-${ARCHI_VERSION}.tgz"
           mkdir -p "$RUNNER_TEMP/archi"
           tar -xzf archi.tgz -C "$RUNNER_TEMP/archi"
           ARCHI_DIR="$(dirname "$(find "$RUNNER_TEMP/archi" -maxdepth 3 -type d -name plugins | head -n1)")"
