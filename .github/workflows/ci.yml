@@ -44,12 +44,17 @@ jobs:
       # testing locally — so the checked-out target file's path is rewritten directly
       # here instead, in this job's own checkout only. Never committed back.
       - name: Download and extract Archi ${{ env.ARCHI_VERSION }} (Linux)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # archi.io release tags don't reliably match ARCHI_VERSION with dots
           # swapped for underscores (they've been renamed 5_10_0 -> 5.10_0
           # between runs) and the repo only keeps the latest release anyway,
           # so resolve the tag from the API instead of guessing its format.
-          ARCHI_TAG="$(curl -fsSL https://api.github.com/repos/archimatetool/archi.io/releases/latest | jq -r .tag_name)"
+          # Authenticated to avoid the unauthenticated API rate limit shared
+          # by all GitHub Actions runner IPs.
+          ARCHI_TAG="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/archimatetool/archi.io/releases/latest | jq -r .tag_name)"
           curl -fsSL -o archi.tgz \
             "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_TAG}/Archi-Linux64-${ARCHI_VERSION}.tgz"
           mkdir -p "$RUNNER_TEMP/archi"
