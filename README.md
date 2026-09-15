@@ -16,13 +16,15 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
 - **No extra dependencies** — single JAR bundles everything (Jetty 12 + Jackson); no Node.js, Python, or sidecar process needed
 - **Multi-model support** — list all open models and switch between them
-- **Query & filter** — search elements by type, layer, or name
-- **Full model authoring** — create elements, relationships, views, and folders with optional folder placement
+- **Query & filter** — search elements by type, layer, name, or custom property value
+- **Full model authoring** — create elements, relationships, views, and folders, targeting a folder by ID or by path
+- **Relationship guidance** — look up which relationship types are valid between two elements, and find relationships already connecting a pair, before creating one
 - **Type change** — change an element's ArchiMate type while preserving all relationships and view references
 - **Visual layout** — place elements on views (including inside groups), draw connections, set positions and sizes
+- **Connection label positioning** — set a connection's label to sit at the source end, middle, or target end, at creation time or after
 - **Appearance control** — change fill color, font color, line color, opacity, and line width
 - **Figure repositioning** — move and resize existing figures on a view by setting `x`/`y`/`width`/`height` via `manage_appearance`
-- **Property management** — update names, documentation, and custom key/value properties
+- **Property management** — set, update, and remove names, documentation, and custom key/value properties
 - **Folder browsing** — get folder tree hierarchy, list folder contents (elements, relationships, views)
 - **Folder management** — create folders and move elements, relationships, and views between folders
 - **View management** — duplicate views with all figures, groups, notes, and connections; remove figures from views
@@ -176,33 +178,33 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 | Tool | Description |
 |------|-------------|
 | `manage_models` | `operation: list \| select` — list open models, or switch the active model by name/ID |
-| `query_model` | Filter elements by ArchiMate type, layer, name, or folder |
+| `query_model` | Filter elements by ArchiMate type, layer, name, folder, or custom property (`property_key`/`property_value`/`property_value_prefix`); `include_properties` returns each element's custom properties |
 | `get_views` | List diagram views with element, group, and note counts |
 
 ### Authoring & editing (write)
 
 | Tool | Operations | Description |
 |------|-----------|-------------|
-| `manage_elements` | `create / update / delete` | Element CRUD. Update supports type changes (`new_type`); delete supports `dry_run` |
-| `manage_relationships` | `create / update / delete` | Relationship CRUD. Type changes preserve ID and view connections; delete supports `dry_run` |
-| `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections |
-| `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level) |
+| `manage_elements` | `create / update / delete` | Element CRUD. `create` and `update` accept `properties`; `update` removes a property via a `null` value or `remove_properties: [key,...]`. Update supports type changes (`new_type`); delete supports `dry_run`. `create` accepts `folder_path` as an alternative to `folder_id` |
+| `manage_relationships` | `create / update / delete / valid_types / between` | Relationship CRUD, plus read-only lookups: `valid_types` returns which relationship types the ArchiMate spec allows between a source/target pair, `between` finds existing relationships already connecting a pair. Type changes preserve ID and view connections; delete supports `dry_run`; `create` accepts `folder_path` as an alternative to `folder_id` and its results include `folder_path` |
+| `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections. `delete` reports the removed view's name and figure/connection counts; `create` accepts `folder_path` as an alternative to `folder_id` |
+| `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level). `add_relationship` accepts `text_position`/`line_color`/`font_color` at creation time, not just via a follow-up `update_connection` |
 | `manage_folders` | `create / move_element / move_view / list_contents / tree` | Create folders, move elements/relationships/views, and inspect the folder hierarchy |
-| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment), reposition/resize them (`x`/`y`/`width`/`height`), or auto-layout a view |
+| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment), reposition/resize them (`x`/`y`/`width`/`height`), or auto-layout a view. `set_figure` accepts a top-level `view_id` applied to items that omit their own |
 
 ### Inspection & analysis (read)
 
 | Tool | Description |
 |------|-------------|
 | `inspect_view` | `operation: layout \| connections \| get_connection` — figure positions/sizes, connections on a view, or one connection's visual properties |
-| `get_element_analysis` | Inspect an element's relationships, view usage, and properties |
-| `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives |
+| `get_element_analysis` | Inspect an element's relationships, view usage (including each figure's geometry and colors), and properties |
+| `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives. Optional convention checks: `require_properties`, `check_orphans`, `property_vocabularies` |
 
 ### Export & composite
 
 | Tool | Description |
 |------|-------------|
-| `export_view_as_image` | Export a view as a PNG image (returned inline and optionally saved to disk) |
+| `export_view_as_image` | Export a view as a PNG image, optionally saved to disk. Returns the image inline by default; set `inline: false` (or just set `output_path`) to skip returning the bytes |
 | `create_sd_overview_view` | Create a complete BIAN SD Overview view with all elements, relationships, figures, connections, and styling in one atomic call |
 
 ---
