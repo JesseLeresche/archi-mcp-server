@@ -80,27 +80,27 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.2.1.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.3.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-2.2.1.jar /opt/Archi/dropins/
+   cp za.co.jesseleresche.archi.mcp-2.3.0.jar /opt/Archi/dropins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-2.2.1.jar "C:\Program Files\Archi\dropins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-2.3.0.jar "C:\Program Files\Archi\dropins\"
    ```
 
    > **Upgrading from an earlier version?** Delete any existing
    > `za.co.jesseleresche.archi.mcp-*.jar` from `dropins/` **before** copying the new one.
    > The plugin is a singleton OSGi bundle — if multiple versions are present, Archi may load
-   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.2.1.jar`
+   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-2.3.0.jar`
    > should remain. For example, on macOS:
    > ```bash
    > rm /Applications/Archi.app/Contents/Eclipse/dropins/za.co.jesseleresche.archi.mcp-*.jar
-   > cp za.co.jesseleresche.archi.mcp-2.2.1.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   > cp za.co.jesseleresche.archi.mcp-2.3.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    > ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -189,7 +189,7 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 | `manage_relationships` | `create / update / delete / valid_types / between` | Relationship CRUD, plus read-only lookups: `valid_types` returns which relationship types the ArchiMate spec allows between a source/target pair, `between` finds existing relationships already connecting a pair. Type changes preserve ID and view connections; delete supports `dry_run`; `create` accepts `folder_path` as an alternative to `folder_id` and its results include `folder_path` |
 | `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections. `delete` reports the removed view's name and figure/connection counts; `create` accepts `folder_path` as an alternative to `folder_id` |
 | `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level). `add_relationship` accepts `text_position`/`line_color`/`font_color` at creation time, not just via a follow-up `update_connection` |
-| `manage_folders` | `create / move_element / move_view / list_contents / tree` | Create folders, move elements/relationships/views, and inspect the folder hierarchy |
+| `manage_folders` | `create / delete / move_element / move_view / list_contents / tree` | Create or delete folders (delete requires the folder to be empty), move elements/relationships/views, and inspect the folder hierarchy |
 | `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment), reposition/resize them (`x`/`y`/`width`/`height`), or auto-layout a view. `set_figure` accepts a top-level `view_id` applied to items that omit their own |
 
 ### Inspection & analysis (read)
@@ -291,7 +291,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.2.1.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.3.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
