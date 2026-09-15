@@ -26,7 +26,7 @@ public class ManageViewsTool extends ConsolidatedTool {
         return "Create, update, delete, or duplicate ArchiMate diagram views. Set 'operation' and "
                 + "pass 'items' as a single object or an array (batch). Returns a result entry per item. "
                 + "Fields by operation — "
-                + "create: {name, folder_id?, documentation?}; "
+                + "create: {name, folder_id?|folder_path?, documentation?}; "
                 + "update: {view_id, name?, documentation?}; "
                 + "delete: {view_id}; "
                 + "duplicate: {source_view_id, new_name, target_folder_id?}. "

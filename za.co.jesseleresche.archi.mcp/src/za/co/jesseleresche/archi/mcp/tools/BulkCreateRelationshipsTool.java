@@ -59,6 +59,12 @@ public class BulkCreateRelationshipsTool implements ITool {
         itemProps.putObject("type").put("type", "string");
         itemProps.putObject("name").put("type", "string");
         itemProps.putObject("folder_id").put("type", "string");
+        itemProps.putObject("folder_path").put("type", "string")
+                .put("description",
+                        "Alternative to folder_id: a \"/\"-separated path starting with a "
+                                + "top-level folder name (e.g. \"Relations/Integrations\"), "
+                                + "matched case-insensitively. Missing intermediate folders are "
+                                + "created. Ignored if folder_id is also set.");
         ObjectNode accessTypeNode = itemProps.putObject("access_type");
         accessTypeNode.put("type", "integer");
         accessTypeNode.put("description", "For AccessRelationship: 0=Unspecified, 1=Read, 2=Write, 3=ReadWrite");
@@ -96,6 +102,7 @@ public class BulkCreateRelationshipsTool implements ITool {
                     String typeName = ConsolidatedTool.requireText(item, "type");
                     String name = item.has("name") ? item.get("name").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
+                    String folderPath = item.has("folder_path") ? item.get("folder_path").asText() : null;
                     Integer accessTypeVal = item.has("access_type") ? item.get("access_type").asInt() : null;
 
                     IArchimateElement source = ModelAccessor.findElementById(model, sourceId);
@@ -149,6 +156,14 @@ public class BulkCreateRelationshipsTool implements ITool {
                         folder = ModelAccessor.findFolderById(model, folderId);
                         if (folder == null) {
                             entry.put("error", "Folder not found: " + folderId);
+                            entries.add(entry);
+                            continue;
+                        }
+                    } else if (folderPath != null) {
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath);
+                        if (folder == null) {
+                            entry.put("error", "folder_path's top-level segment doesn't match "
+                                    + "any root folder: " + folderPath);
                             entries.add(entry);
                             continue;
                         }

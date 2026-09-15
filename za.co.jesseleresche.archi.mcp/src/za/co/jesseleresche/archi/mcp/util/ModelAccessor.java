@@ -353,6 +353,28 @@ public class ModelAccessor {
     }
 
     /**
+     * Resolve a "/"-separated folder path whose first segment names one of the model's
+     * top-level folders (e.g. "Application/Service domains"), matched case-insensitively;
+     * remaining segments are resolved/created under it. Returns null if the first segment
+     * doesn't match any top-level folder.
+     */
+    public static IFolder findOrCreateFolderByPath(IArchimateModel model, String path) {
+        String[] segments = path.split("/", 2);
+        String rootName = segments[0];
+        IFolder root = null;
+        for (IFolder f : model.getFolders()) {
+            if (rootName.equalsIgnoreCase(f.getName())) {
+                root = f;
+                break;
+            }
+        }
+        if (root == null) {
+            return null;
+        }
+        return segments.length > 1 ? findOrCreateFolderByPath(root, segments[1]) : root;
+    }
+
+    /**
      * Returns the root Views folder (the default folder for diagram models).
      */
     public static IFolder getViewsFolder(IArchimateModel model) {

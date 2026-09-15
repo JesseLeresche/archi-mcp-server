@@ -48,6 +48,12 @@ public class BulkCreateViewsTool implements ITool {
         itemProps.putObject("name").put("type", "string");
         itemProps.putObject("folder_id").put("type", "string")
                 .put("description", "Optional folder ID for this view");
+        itemProps.putObject("folder_path").put("type", "string")
+                .put("description",
+                        "Alternative to folder_id: a \"/\"-separated path starting with a "
+                                + "top-level folder name (e.g. \"Views/Overviews\"), matched "
+                                + "case-insensitively. Missing intermediate folders are created. "
+                                + "Ignored if folder_id is also set.");
         itemProps.putObject("documentation").put("type", "string");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("name");
@@ -79,6 +85,8 @@ public class BulkCreateViewsTool implements ITool {
                     String name = ConsolidatedTool.requireText(item, "name");
                     String folderId = item.has("folder_id")
                             ? item.get("folder_id").asText() : null;
+                    String folderPath = item.has("folder_path")
+                            ? item.get("folder_path").asText() : null;
                     String documentation = item.has("documentation")
                             ? item.get("documentation").asText() : null;
 
@@ -96,6 +104,14 @@ public class BulkCreateViewsTool implements ITool {
                         if (folder == null) {
                             entry.put("error",
                                     "Folder not found: " + folderId);
+                            entries.add(entry);
+                            continue;
+                        }
+                    } else if (folderPath != null) {
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath);
+                        if (folder == null) {
+                            entry.put("error", "folder_path's top-level segment doesn't match "
+                                    + "any root folder: " + folderPath);
                             entries.add(entry);
                             continue;
                         }
