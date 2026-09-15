@@ -34,7 +34,8 @@ public class ManageViewContentTool extends ConsolidatedTool {
                 + "pass 'items' as a single object or an array (batch). Returns a result entry per item. "
                 + "Fields by operation — "
                 + "add_element: {element_id, x?, y?, width?, height?, parent_figure_id?}; "
-                + "add_relationship: {relationship_id, source_figure_id?, target_figure_id?, bendpoints?}; "
+                + "add_relationship: {relationship_id, source_figure_id?, target_figure_id?, bendpoints?, "
+                + "text_position?, line_color?, font_color?}; "
                 + "remove_figure: {figure_id?|element_id?}; "
                 + "update_connection: {connection_id?|relationship_id?, bendpoints?, line_color?, line_width?, font_color?, text_position?}; "
                 + "delete_connection: {connection_id?|relationship_id?}.";

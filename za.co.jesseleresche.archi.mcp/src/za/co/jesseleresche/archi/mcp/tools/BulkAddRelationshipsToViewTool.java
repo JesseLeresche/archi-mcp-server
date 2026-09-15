@@ -32,7 +32,9 @@ public class BulkAddRelationshipsToViewTool implements ITool {
     @Override
     public String getDescription() {
         return "Draw multiple visual connections on a view for existing logical relationships "
-                + "in a single call. Returns a result entry per connection, with per-item success or error.";
+                + "in a single call. Returns a result entry per connection, with per-item success or error. "
+                + "Optionally set text_position, line_color, and font_color at creation time "
+                + "(equivalent to a follow-up update_connection call).";
     }
 
     @Override
@@ -64,6 +66,23 @@ public class BulkAddRelationshipsToViewTool implements ITool {
         bpProps.putObject("startY").put("type", "integer");
         bpProps.putObject("endX").put("type", "integer");
         bpProps.putObject("endY").put("type", "integer");
+
+        ObjectNode textPosition = itemProps.putObject("text_position");
+        textPosition.put("type", "integer");
+        textPosition.put("description",
+                "Position of the relationship label: 0=source end, 1=middle, 2=target end. "
+                        + "Set this on connections between the same pair of elements to avoid "
+                        + "overlapping midpoint labels.");
+        ArrayNode posEnum = textPosition.putArray("enum");
+        posEnum.add(0);
+        posEnum.add(1);
+        posEnum.add(2);
+
+        itemProps.putObject("line_color").put("type", "string")
+                .put("description", "Line color as hex string, e.g. \"#FF0000\"");
+        itemProps.putObject("font_color").put("type", "string")
+                .put("description", "Label font color as hex string, e.g. \"#000000\"");
+
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("relationship_id");
 
@@ -160,6 +179,15 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                             bendpoint.setEndY(bp.path("endY").asInt(0));
                             connection.getBendpoints().add(bendpoint);
                         }
+                    }
+                    if (item.has("text_position")) {
+                        connection.setTextPosition(item.get("text_position").asInt());
+                    }
+                    if (item.has("line_color")) {
+                        connection.setLineColor(item.get("line_color").asText());
+                    }
+                    if (item.has("font_color")) {
+                        connection.setFontColor(item.get("font_color").asText());
                     }
 
                     entry.put("connection_id", connection.getId());

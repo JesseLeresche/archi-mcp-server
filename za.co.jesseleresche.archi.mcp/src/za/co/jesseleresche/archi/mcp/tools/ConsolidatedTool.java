@@ -126,6 +126,18 @@ abstract class ConsolidatedTool implements ITool {
         return out;
     }
 
+    /**
+     * Return a copy of the item object with a string field set only if it isn't already
+     * present — lets a top-level default (e.g. view_id) be supplied once while still allowing
+     * individual items to override it.
+     */
+    protected JsonNode withDefaultField(JsonNode item, String key, String value) {
+        if (item.isObject() && item.hasNonNull(key)) {
+            return item;
+        }
+        return withField(item, key, value);
+    }
+
     /** Build the standard {@code operation} + {@code items} schema for write tools. */
     protected ObjectNode operationItemsSchema(String[] operations, String itemsDescription) {
         ObjectNode schema = MAPPER.createObjectNode();

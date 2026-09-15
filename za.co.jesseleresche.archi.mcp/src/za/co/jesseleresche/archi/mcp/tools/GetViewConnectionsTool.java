@@ -112,6 +112,7 @@ public class GetViewConnectionsTool implements ITool {
                     bendpoints.add(bpMap);
                 }
                 entry.put("bendpoints", bendpoints);
+                entry.put("text_position", c.getTextPosition());
 
                 connections.add(entry);
             }

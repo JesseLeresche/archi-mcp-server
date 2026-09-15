@@ -30,7 +30,8 @@ public class DeleteViewTool implements ITool {
     @Override
     public String getDescription() {
         return "Delete a diagram view by ID. Only the visual diagram is removed; "
-                + "underlying model elements and relationships are not affected.";
+                + "underlying model elements and relationships are not affected. "
+                + "Returns the deleted view's name and the number of figures/connections removed.";
     }
 
     @Override
@@ -64,6 +65,12 @@ public class DeleteViewTool implements ITool {
             throw new Exception("View not found: " + viewId);
         }
 
+        String viewName = view.getName();
+        var figuresOnView = ModelAccessor.collectAllDiagramObjects(view);
+        int figureCount = figuresOnView.size();
+        int connectionCount = figuresOnView.stream()
+                .mapToInt(f -> f.getSourceConnections().size()).sum();
+
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             final IFolder[] folderHolder = {(IFolder) view.eContainer()};
             final int[] indexHolder =
@@ -91,7 +98,12 @@ public class DeleteViewTool implements ITool {
 
             IEditorModelManager.INSTANCE.saveModel(model);
 
-            return new LinkedHashMap<String, Object>();
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("view_id", viewId);
+            entry.put("view_name", viewName);
+            entry.put("figures_removed", figureCount);
+            entry.put("connections_removed", connectionCount);
+            return entry;
         });
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

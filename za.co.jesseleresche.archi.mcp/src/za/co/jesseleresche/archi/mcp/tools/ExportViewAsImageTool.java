@@ -34,8 +34,9 @@ public class ExportViewAsImageTool implements ITool {
 
     @Override
     public String getDescription() {
-        return "Export a view as a PNG image. Returns the image inline and "
-                + "optionally saves it to a file path on disk.";
+        return "Export a view as a PNG image, and optionally save it to a file path on disk. "
+                + "Returns the image inline by default; when output_path is set, the default "
+                + "flips to not inline (set inline=true to get both).";
     }
 
     @Override
@@ -66,6 +67,13 @@ public class ExportViewAsImageTool implements ITool {
                 "Optional: absolute file path to save the PNG to (e.g. "
                         + "\"/Users/me/diagram.png\"). Parent directory must exist.");
 
+        ObjectNode inline = properties.putObject("inline");
+        inline.put("type", "boolean");
+        inline.put("description",
+                "Whether to return the image bytes inline in the response. Defaults to true, "
+                        + "unless output_path is set, in which case it defaults to false (the "
+                        + "file on disk is the result). Set explicitly to override either way.");
+
         ArrayNode required = schema.putArray("required");
         required.add("view_id");
 
@@ -91,6 +99,9 @@ public class ExportViewAsImageTool implements ITool {
         int margin = args.has("margin") ? args.get("margin").asInt() : 10;
         String outputPath = args.has("output_path")
                 ? args.get("output_path").asText() : null;
+        boolean inlineDefault = outputPath == null;
+        boolean inline = args.has("inline")
+                ? args.get("inline").asBoolean(inlineDefault) : inlineDefault;
 
         if (scale <= 0 || scale > 4.0) {
             throw new Exception(
@@ -129,16 +140,16 @@ public class ExportViewAsImageTool implements ITool {
             }
         }
 
-        String base64 = Base64.getEncoder().encodeToString(pngBytes);
-
         List<ObjectNode> blocks = new ArrayList<>();
 
-        // Image content block
-        ObjectNode imageBlock = ToolRegistry.MAPPER.createObjectNode();
-        imageBlock.put("type", "image");
-        imageBlock.put("data", base64);
-        imageBlock.put("mimeType", "image/png");
-        blocks.add(imageBlock);
+        if (inline) {
+            String base64 = Base64.getEncoder().encodeToString(pngBytes);
+            ObjectNode imageBlock = ToolRegistry.MAPPER.createObjectNode();
+            imageBlock.put("type", "image");
+            imageBlock.put("data", base64);
+            imageBlock.put("mimeType", "image/png");
+            blocks.add(imageBlock);
+        }
 
         // Text content block with metadata
         ObjectNode textBlock = ToolRegistry.MAPPER.createObjectNode();
@@ -149,6 +160,9 @@ public class ExportViewAsImageTool implements ITool {
                 .append(String.format("%.0f", scale * 100)).append("% scale)");
         if (outputPath != null) {
             info.append(". Saved to: ").append(outputPath);
+        }
+        if (!inline) {
+            info.append(". Image bytes not returned inline (inline=false).");
         }
         textBlock.put("text", info.toString());
         blocks.add(textBlock);
