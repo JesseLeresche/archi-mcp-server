@@ -8,6 +8,8 @@ import java.util.Map;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
+import java.util.stream.Collectors;
+
 import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -118,9 +120,15 @@ public class BulkCreateRelationshipsTool implements ITool {
                     }
 
                     if (!ArchimateModelUtils.isValidRelationship(source, target, eClass)) {
-                        entry.put("error", "Invalid relationship: " + eClass.getName()
+                        List<EClass> validTypes = ArchimateModelUtils.getValidRelationships(source, target);
+                        String msg = "Invalid relationship: " + eClass.getName()
                                 + " not allowed between " + source.eClass().getName()
-                                + " and " + target.eClass().getName());
+                                + " and " + target.eClass().getName();
+                        if (!validTypes.isEmpty()) {
+                            msg += ". Valid types: " + validTypes.stream()
+                                    .map(EClass::getName).collect(Collectors.joining(", "));
+                        }
+                        entry.put("error", msg);
                         entries.add(entry);
                         continue;
                     }
@@ -151,6 +159,7 @@ public class BulkCreateRelationshipsTool implements ITool {
 
                     entry.put("id", relationship.getId());
                     entry.put("folder_id", folder.getId());
+                    entry.put("folder_path", ModelAccessor.getFolderPath(folder));
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());
                 }

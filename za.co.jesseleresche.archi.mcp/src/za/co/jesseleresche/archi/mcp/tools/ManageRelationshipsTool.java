@@ -15,6 +15,8 @@ public class ManageRelationshipsTool extends ConsolidatedTool {
     private final BulkCreateRelationshipsTool create = new BulkCreateRelationshipsTool();
     private final BulkUpdateRelationshipsTool update = new BulkUpdateRelationshipsTool();
     private final BulkDeleteRelationshipsTool delete = new BulkDeleteRelationshipsTool();
+    private final GetValidRelationshipTypesTool validTypes = new GetValidRelationshipTypesTool();
+    private final GetRelationshipsBetweenTool between = new GetRelationshipsBetweenTool();
 
     @Override
     public String getName() {
@@ -23,18 +25,24 @@ public class ManageRelationshipsTool extends ConsolidatedTool {
 
     @Override
     public String getDescription() {
-        return "Create, update, or delete ArchiMate relationships. Set 'operation' and pass 'items' "
-                + "as a single object or an array (batch). Returns a result entry per item. "
-                + "Fields by operation — "
-                + "create: {source_id, target_id, type, name?, folder_id?, access_type?}; "
+        return "Create, update, or delete ArchiMate relationships, or query relationship "
+                + "options. Set 'operation' and pass 'items' as a single object or an array "
+                + "(batch). Returns a result entry per item. Fields by operation — "
+                + "create: {source_id, target_id, type, name?, folder_id?, access_type?} "
+                + "(results include folder_path); "
                 + "update: {relationship_id, new_type?, name?, documentation?, access_type?, properties?, new_folder_id?}; "
-                + "delete: a relationship_id string, or {relationship_id, dry_run?}.";
+                + "delete: a relationship_id string, or {relationship_id, dry_run?}; "
+                + "valid_types: {source_id, target_id} — returns which relationship types the "
+                + "ArchiMate spec allows between them, without creating anything; "
+                + "between: {element_a_id, element_b_id, direction?} — returns existing "
+                + "relationships already connecting that pair (direction: \"either\" default or "
+                + "\"source_to_target\").";
     }
 
     @Override
     public ObjectNode getInputSchema() {
         return operationItemsSchema(
-                new String[] {"create", "update", "delete"},
+                new String[] {"create", "update", "delete", "valid_types", "between"},
                 "Relationship payload(s): a single object or an array. For delete, items may be "
                         + "relationship_id strings. Fields depend on 'operation' (see the tool description).");
     }
@@ -67,9 +75,13 @@ public class ManageRelationshipsTool extends ConsolidatedTool {
                 }
                 return delete.execute(wrapper);
             }
+            case "valid_types":
+                return delegatePerItem(validTypes, items);
+            case "between":
+                return delegatePerItem(between, items);
             default:
                 throw new Exception("Unknown operation '" + operation
-                        + "'. Valid operations: create, update, delete");
+                        + "'. Valid operations: create, update, delete, valid_types, between");
         }
     }
 }

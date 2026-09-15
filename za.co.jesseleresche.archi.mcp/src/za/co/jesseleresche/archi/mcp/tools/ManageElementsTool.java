@@ -26,9 +26,13 @@ public class ManageElementsTool extends ConsolidatedTool {
         return "Create, update, or delete ArchiMate elements. Set 'operation' and pass 'items' "
                 + "as a single object or an array (batch). Returns a result entry per item. "
                 + "Fields by operation — "
-                + "create: {name, type, documentation?, folder_id?}; "
-                + "update: {element_id, name?, documentation?, new_type?, new_folder_id?, properties?}; "
-                + "delete: {element_id, dry_run?}.";
+                + "create: {name, type, documentation?, folder_id?, properties?}; "
+                + "update: {element_id, name?, documentation?, new_type?, new_folder_id?, properties?, remove_properties?}; "
+                + "delete: {element_id, dry_run?}. "
+                + "properties is [{key, value}] (insertion order preserved); on update, a null value "
+                + "removes that property, and remove_properties: [key,...] removes by key. "
+                + "For large delete batches, some MCP clients gate the whole call behind a single "
+                + "destructive-action confirmation — prefer smaller batches if that becomes a problem.";
     }
 
     @Override

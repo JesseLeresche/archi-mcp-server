@@ -314,6 +314,45 @@ public class ModelAccessor {
     }
 
     /**
+     * Returns the folder's full path from its root folder, e.g. "Application/Service domains".
+     */
+    public static String getFolderPath(IFolder folder) {
+        List<String> names = new ArrayList<>();
+        IFolder current = folder;
+        while (current != null) {
+            names.add(0, current.getName());
+            current = current.eContainer() instanceof IFolder parent ? parent : null;
+        }
+        return String.join("/", names);
+    }
+
+    /**
+     * Resolve a "/"-separated folder path (e.g. "Application/Service domains") under the given
+     * root folder, creating any missing intermediate folders. Segment matching is exact
+     * (case-sensitive) against existing subfolder names.
+     */
+    public static IFolder findOrCreateFolderByPath(IFolder root, String path) {
+        IFolder current = root;
+        for (String segment : path.split("/")) {
+            if (segment.isBlank()) continue;
+            IFolder next = null;
+            for (IFolder sub : current.getFolders()) {
+                if (segment.equals(sub.getName())) {
+                    next = sub;
+                    break;
+                }
+            }
+            if (next == null) {
+                next = com.archimatetool.model.IArchimateFactory.eINSTANCE.createFolder();
+                next.setName(segment);
+                current.getFolders().add(next);
+            }
+            current = next;
+        }
+        return current;
+    }
+
+    /**
      * Returns the root Views folder (the default folder for diagram models).
      */
     public static IFolder getViewsFolder(IArchimateModel model) {

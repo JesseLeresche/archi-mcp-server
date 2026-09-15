@@ -13,6 +13,7 @@ import com.archimatetool.model.IBusinessElement;
 import com.archimatetool.model.IFolder;
 import com.archimatetool.model.IImplementationMigrationElement;
 import com.archimatetool.model.IMotivationElement;
+import com.archimatetool.model.IProperty;
 import com.archimatetool.model.ITechnologyElement;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -31,7 +32,10 @@ public class QueryModelTool implements ITool {
     @Override
     public String getDescription() {
         return "List all elements in the open model. Optionally filter by ArchiMate type, "
-                + "layer, name substring, or folder ID.";
+                + "layer, name substring, folder ID, or custom property (property_key, with "
+                + "property_value for an exact match or property_value_prefix for a prefix match). "
+                + "Set include_properties=true to include each element's custom properties "
+                + "(as [{key, value}], insertion order preserved) in the results.";
     }
 
     @Override
@@ -72,6 +76,28 @@ public class QueryModelTool implements ITool {
                 "When folder_id is set: if true (default), include elements in all subfolders; "
                         + "if false, include only elements directly in that folder.");
 
+        ObjectNode propertyKey = properties.putObject("property_key");
+        propertyKey.put("type", "string");
+        propertyKey.put("description", "Only return elements that have a custom property with this key.");
+
+        ObjectNode propertyValue = properties.putObject("property_value");
+        propertyValue.put("type", "string");
+        propertyValue.put("description",
+                "With property_key: only elements whose property value equals this exactly.");
+
+        ObjectNode propertyValuePrefix = properties.putObject("property_value_prefix");
+        propertyValuePrefix.put("type", "string");
+        propertyValuePrefix.put("description",
+                "With property_key: only elements whose property value starts with this "
+                        + "(ignored if property_value is also set).");
+
+        ObjectNode includeProperties = properties.putObject("include_properties");
+        includeProperties.put("type", "boolean");
+        includeProperties.put("default", false);
+        includeProperties.put("description",
+                "If true, include each element's custom properties as [{key, value}] "
+                        + "(insertion order preserved) in the results.");
+
         return schema;
     }
 
@@ -92,6 +118,14 @@ public class QueryModelTool implements ITool {
                 ? args.get("folder_id").asText() : null;
         boolean includeSubfolders = args == null || !args.has("include_subfolders")
                 || args.get("include_subfolders").asBoolean(true);
+        String propertyKey = args != null && args.has("property_key")
+                ? args.get("property_key").asText() : null;
+        String propertyValue = args != null && args.has("property_value")
+                ? args.get("property_value").asText() : null;
+        String propertyValuePrefix = args != null && args.has("property_value_prefix")
+                ? args.get("property_value_prefix").asText() : null;
+        boolean includeProperties = args != null && args.has("include_properties")
+                && args.get("include_properties").asBoolean(false);
 
         List<IArchimateElement> candidates;
 
@@ -112,7 +146,7 @@ public class QueryModelTool implements ITool {
             candidates = ModelAccessor.collectAllFromFolders(model, IArchimateElement.class);
         }
 
-        List<Map<String, String>> results = new ArrayList<>();
+        List<Map<String, Object>> results = new ArrayList<>();
 
         for (IArchimateElement element : candidates) {
             String layer = detectLayer(element);
@@ -128,8 +162,28 @@ public class QueryModelTool implements ITool {
                     || !element.getName().toLowerCase().contains(nameSearch))) {
                 continue;
             }
+            if (propertyKey != null) {
+                boolean found = false;
+                for (IProperty p : element.getProperties()) {
+                    if (!propertyKey.equals(p.getKey())) {
+                        continue;
+                    }
+                    String v = p.getValue();
+                    if (propertyValue != null) {
+                        found = propertyValue.equals(v);
+                    } else if (propertyValuePrefix != null) {
+                        found = v != null && v.startsWith(propertyValuePrefix);
+                    } else {
+                        found = true;
+                    }
+                    if (found) break;
+                }
+                if (!found) {
+                    continue;
+                }
+            }
 
-            Map<String, String> entry = new LinkedHashMap<>();
+            Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", element.getId());
             entry.put("name", element.getName());
             entry.put("type", type);
@@ -137,6 +191,16 @@ public class QueryModelTool implements ITool {
             String doc = element.getDocumentation();
             if (doc != null && !doc.isEmpty()) {
                 entry.put("documentation", doc);
+            }
+            if (includeProperties) {
+                List<Map<String, String>> props = new ArrayList<>();
+                for (IProperty p : element.getProperties()) {
+                    Map<String, String> pEntry = new LinkedHashMap<>();
+                    pEntry.put("key", p.getKey());
+                    pEntry.put("value", p.getValue());
+                    props.add(pEntry);
+                }
+                entry.put("properties", props);
             }
             results.add(entry);
         }

@@ -10,6 +10,7 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
+import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,9 +36,10 @@ public class GetElementAnalysisTool implements ITool {
     public String getDescription() {
         return "Analyze an element's relationships, view usage, and "
                 + "properties. Returns incoming/outgoing relationships, "
-                + "which views the element appears in, and custom "
-                + "properties. Use this instead of scanning the model to "
-                + "find how elements are connected.";
+                + "which views the element appears in (with each figure's "
+                + "geometry and fill/line/font color, when set), and custom "
+                + "properties (insertion order preserved). Use this instead "
+                + "of scanning the model to find how elements are connected.";
     }
 
     @Override
@@ -128,15 +130,31 @@ public class GetElementAnalysisTool implements ITool {
                 ModelAccessor.collectAllFromFolders(
                         model, IArchimateDiagramModel.class);
 
-        List<Map<String, String>> usedInViews = new ArrayList<>();
+        List<Map<String, Object>> usedInViews = new ArrayList<>();
         for (IArchimateDiagramModel view : allViews) {
             IDiagramModelArchimateObject figure =
                     ModelAccessor.findFigureByElementId(view, elementId);
             if (figure != null) {
-                Map<String, String> entry = new LinkedHashMap<>();
+                Map<String, Object> entry = new LinkedHashMap<>();
                 entry.put("view_id", view.getId());
                 entry.put("view_name", view.getName());
                 entry.put("figure_id", figure.getId());
+                IBounds bounds = figure.getBounds();
+                if (bounds != null) {
+                    entry.put("x", bounds.getX());
+                    entry.put("y", bounds.getY());
+                    entry.put("width", bounds.getWidth());
+                    entry.put("height", bounds.getHeight());
+                }
+                if (figure.getFillColor() != null) {
+                    entry.put("fill_color", figure.getFillColor());
+                }
+                if (figure.getLineColor() != null) {
+                    entry.put("line_color", figure.getLineColor());
+                }
+                if (figure.getFontColor() != null) {
+                    entry.put("font_color", figure.getFontColor());
+                }
                 usedInViews.add(entry);
             }
         }

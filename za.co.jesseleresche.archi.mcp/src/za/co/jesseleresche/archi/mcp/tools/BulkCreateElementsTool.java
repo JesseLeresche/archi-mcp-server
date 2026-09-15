@@ -15,6 +15,7 @@ import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IFolder;
+import com.archimatetool.model.IProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -33,7 +34,7 @@ public class BulkCreateElementsTool implements ITool {
     public String getDescription() {
         return "Create multiple ArchiMate elements in a single call. "
                 + "Returns a result entry per element, with per-item success or error. "
-                + "Each item may optionally specify a folder_id.";
+                + "Each item may optionally specify a folder_id and custom properties.";
     }
 
     @Override
@@ -54,6 +55,15 @@ public class BulkCreateElementsTool implements ITool {
         itemProps.putObject("documentation").put("type", "string");
         itemProps.putObject("folder_id").put("type", "string")
                 .put("description", "Optional folder ID for this element");
+        ObjectNode propsSchema = itemProps.putObject("properties");
+        propsSchema.put("type", "array");
+        propsSchema.put("description", "Optional custom properties to set on creation, as {key, value} pairs "
+                + "(insertion order is preserved).");
+        ObjectNode propsItems = propsSchema.putObject("items");
+        propsItems.put("type", "object");
+        ObjectNode propsItemProps = propsItems.putObject("properties");
+        propsItemProps.putObject("key").put("type", "string");
+        propsItemProps.putObject("value").put("type", "string");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("name");
         itemRequired.add("type");
@@ -100,6 +110,14 @@ public class BulkCreateElementsTool implements ITool {
                     if (documentation != null) {
                         element.setDocumentation(documentation);
                     }
+                    if (item.has("properties") && item.get("properties").isArray()) {
+                        for (JsonNode prop : item.get("properties")) {
+                            IProperty p = IArchimateFactory.eINSTANCE.createProperty();
+                            p.setKey(prop.get("key").asText());
+                            p.setValue(prop.get("value").asText());
+                            element.getProperties().add(p);
+                        }
+                    }
 
                     IFolder folder;
                     if (folderId != null) {
@@ -116,6 +134,7 @@ public class BulkCreateElementsTool implements ITool {
 
                     entry.put("id", element.getId());
                     entry.put("folder_id", folder.getId());
+                    entry.put("folder_path", ModelAccessor.getFolderPath(folder));
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());
                 }

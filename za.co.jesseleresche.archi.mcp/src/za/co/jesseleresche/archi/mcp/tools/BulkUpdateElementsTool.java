@@ -39,8 +39,13 @@ public class BulkUpdateElementsTool implements ITool {
     public String getDescription() {
         return "Update name, documentation, custom properties, and/or ArchiMate type "
                 + "on multiple elements in a single call. "
+                + "properties[].value: null removes that property; remove_properties: [key,...] "
+                + "removes properties by key without needing their current value. "
                 + "Type changes create a new element with a new ID; all view figures "
-                + "and relationships are updated to reference the new element.";
+                + "and relationships are updated to reference the new element. "
+                + "The model is saved once per call regardless of how many updates it contains, "
+                + "so batching many property changes into one call (rather than many small calls) "
+                + "avoids repeated full-model saves.";
     }
 
     @Override
@@ -72,11 +77,25 @@ public class BulkUpdateElementsTool implements ITool {
                         + "If omitted, same folder as the old element.");
         ObjectNode propsSchema = itemProps.putObject("properties");
         propsSchema.put("type", "array");
+        propsSchema.put("description",
+                "Custom properties to set. Existing keys are updated in place (order preserved); "
+                        + "new keys are appended. A null value removes the property "
+                        + "(equivalent to listing its key in remove_properties).");
         ObjectNode propsItems = propsSchema.putObject("items");
         propsItems.put("type", "object");
         ObjectNode propsItemProps = propsItems.putObject("properties");
         propsItemProps.putObject("key").put("type", "string");
-        propsItemProps.putObject("value").put("type", "string");
+        ObjectNode propsValue = propsItemProps.putObject("value");
+        ArrayNode propsValueType = propsValue.putArray("type");
+        propsValueType.add("string");
+        propsValueType.add("null");
+        propsValue.put("description", "New value, or null to remove this property.");
+
+        ObjectNode removeProps = itemProps.putObject("remove_properties");
+        removeProps.put("type", "array");
+        removeProps.put("description", "Keys of custom properties to remove from this element.");
+        removeProps.putObject("items").put("type", "string");
+
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("element_id");
 
@@ -131,14 +150,7 @@ public class BulkUpdateElementsTool implements ITool {
                             element.setDocumentation(
                                     item.get("documentation").asText());
                         }
-                        if (item.has("properties")
-                                && item.get("properties").isArray()) {
-                            for (JsonNode prop : item.get("properties")) {
-                                setProperty(element,
-                                        prop.get("key").asText(),
-                                        prop.get("value").asText());
-                            }
-                        }
+                        applyPropertyUpdates(element, item);
                         entry.put("element_id", element.getId());
                     }
                 } catch (Exception e) {
@@ -206,13 +218,7 @@ public class BulkUpdateElementsTool implements ITool {
             p.setValue(oldProp.getValue());
             newElement.getProperties().add(p);
         }
-        if (item.has("properties") && item.get("properties").isArray()) {
-            for (JsonNode prop : item.get("properties")) {
-                setProperty(newElement,
-                        prop.get("key").asText(),
-                        prop.get("value").asText());
-            }
-        }
+        applyPropertyUpdates(newElement, item);
 
         // Place in folder
         IFolder targetFolder = newFolder != null
@@ -246,6 +252,27 @@ public class BulkUpdateElementsTool implements ITool {
         entry.put("new_id", newElement.getId());
         entry.put("folder_id", targetFolder.getId());
         return entry;
+    }
+
+    /** Apply {@code properties} (set, or remove on a null value) and {@code remove_properties}. */
+    private void applyPropertyUpdates(IArchimateElement element, JsonNode item) {
+        if (item.has("properties") && item.get("properties").isArray()) {
+            for (JsonNode prop : item.get("properties")) {
+                String key = prop.get("key").asText();
+                JsonNode valueNode = prop.get("value");
+                if (valueNode == null || valueNode.isNull()) {
+                    element.getProperties().removeIf(p -> key.equals(p.getKey()));
+                } else {
+                    setProperty(element, key, valueNode.asText());
+                }
+            }
+        }
+        if (item.has("remove_properties") && item.get("remove_properties").isArray()) {
+            for (JsonNode keyNode : item.get("remove_properties")) {
+                String key = keyNode.asText();
+                element.getProperties().removeIf(p -> key.equals(p.getKey()));
+            }
+        }
     }
 
     private void setProperty(IArchimateElement element, String key,
