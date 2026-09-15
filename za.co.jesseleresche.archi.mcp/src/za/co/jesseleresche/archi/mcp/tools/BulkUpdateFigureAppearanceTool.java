@@ -112,7 +112,7 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
             for (JsonNode item : updatesNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
-                    String viewId = item.get("view_id").asText();
+                    String viewId = ConsolidatedTool.requireText(item, "view_id");
                     String elementId = item.has("element_id")
                             ? item.get("element_id").asText() : null;
                     String figureId = item.has("figure_id")
