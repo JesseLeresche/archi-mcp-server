@@ -40,7 +40,10 @@ public class BulkUpdateElementsTool implements ITool {
         return "Update name, documentation, custom properties, and/or ArchiMate type "
                 + "on multiple elements in a single call. "
                 + "properties[].value: null removes that property; remove_properties: [key,...] "
-                + "removes properties by key without needing their current value. "
+                + "removes properties by key without needing their current value. When either is "
+                + "used, the result entry includes removed: n — the count of properties actually "
+                + "removed, since matching is exact-string only and a mistyped or already-absent "
+                + "key would otherwise no-op silently. "
                 + "Type changes create a new element with a new ID; all view figures "
                 + "and relationships are updated to reference the new element. "
                 + "The model is saved once per call regardless of how many updates it contains, "
@@ -150,8 +153,11 @@ public class BulkUpdateElementsTool implements ITool {
                             element.setDocumentation(
                                     item.get("documentation").asText());
                         }
-                        applyPropertyUpdates(element, item);
+                        int removed = applyPropertyUpdates(element, item);
                         entry.put("element_id", element.getId());
+                        if (item.has("properties") || item.has("remove_properties")) {
+                            entry.put("removed", removed);
+                        }
                     }
                 } catch (Exception e) {
                     entry.put("element_id", elementId);
@@ -218,7 +224,7 @@ public class BulkUpdateElementsTool implements ITool {
             p.setValue(oldProp.getValue());
             newElement.getProperties().add(p);
         }
-        applyPropertyUpdates(newElement, item);
+        int removed = applyPropertyUpdates(newElement, item);
 
         // Place in folder
         IFolder targetFolder = newFolder != null
@@ -251,17 +257,27 @@ public class BulkUpdateElementsTool implements ITool {
         entry.put("old_id", element.getId());
         entry.put("new_id", newElement.getId());
         entry.put("folder_id", targetFolder.getId());
+        if (item.has("properties") || item.has("remove_properties")) {
+            entry.put("removed", removed);
+        }
         return entry;
     }
 
-    /** Apply {@code properties} (set, or remove on a null value) and {@code remove_properties}. */
-    private void applyPropertyUpdates(IArchimateElement element, JsonNode item) {
+    /**
+     * Apply {@code properties} (set, or remove on a null value) and {@code remove_properties}.
+     * Returns how many properties were actually removed, so a mistyped or already-absent key
+     * is distinguishable from a successful removal (matching is exact-string only).
+     */
+    private int applyPropertyUpdates(IArchimateElement element, JsonNode item) {
+        int removed = 0;
         if (item.has("properties") && item.get("properties").isArray()) {
             for (JsonNode prop : item.get("properties")) {
                 String key = prop.get("key").asText();
                 JsonNode valueNode = prop.get("value");
                 if (valueNode == null || valueNode.isNull()) {
-                    element.getProperties().removeIf(p -> key.equals(p.getKey()));
+                    if (element.getProperties().removeIf(p -> key.equals(p.getKey()))) {
+                        removed++;
+                    }
                 } else {
                     setProperty(element, key, valueNode.asText());
                 }
@@ -270,9 +286,12 @@ public class BulkUpdateElementsTool implements ITool {
         if (item.has("remove_properties") && item.get("remove_properties").isArray()) {
             for (JsonNode keyNode : item.get("remove_properties")) {
                 String key = keyNode.asText();
-                element.getProperties().removeIf(p -> key.equals(p.getKey()));
+                if (element.getProperties().removeIf(p -> key.equals(p.getKey()))) {
+                    removed++;
+                }
             }
         }
+        return removed;
     }
 
     private void setProperty(IArchimateElement element, String key,
