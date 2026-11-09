@@ -199,6 +199,13 @@ public class BulkUpdateElementsTool implements ITool {
                         "Folder not found: " + newFolderIdStr);
                 return entry;
             }
+            try {
+                ModelAccessor.requireSection(model, newFolder, IArchimateFactory.eINSTANCE.create(newEClass));
+            } catch (Exception e) {
+                entry.put("element_id", element.getId());
+                entry.put("error", e.getMessage());
+                return entry;
+            }
         } else {
             newFolder = element.eContainer() instanceof IFolder f
                     ? f : null;

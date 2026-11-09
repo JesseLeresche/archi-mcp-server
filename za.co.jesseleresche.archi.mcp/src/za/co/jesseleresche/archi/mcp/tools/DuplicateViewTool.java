@@ -94,6 +94,7 @@ public class DuplicateViewTool implements ITool {
             if (targetFolder == null) {
                 throw new Exception("Target folder not found: " + targetFolderId);
             }
+            ModelAccessor.requireSection(model, targetFolder, sourceView);
         } else {
             targetFolder = sourceView.eContainer() instanceof IFolder f ? f : ModelAccessor.getViewsFolder(model);
         }

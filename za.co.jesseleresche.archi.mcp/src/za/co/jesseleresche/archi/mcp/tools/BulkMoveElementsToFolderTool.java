@@ -106,6 +106,7 @@ public class BulkMoveElementsToFolderTool implements ITool {
                             entries.add(entry);
                             continue;
                         }
+                        ModelAccessor.requireSection(model, targetFolder, element);
                         IFolder currentFolder = (IFolder) element.eContainer();
                         entry.put("previous_folder_id",
                                 currentFolder != null ? currentFolder.getId() : null);
@@ -119,6 +120,7 @@ public class BulkMoveElementsToFolderTool implements ITool {
                             entries.add(entry);
                             continue;
                         }
+                        ModelAccessor.requireSection(model, targetFolder, rel);
                         IFolder currentFolder = (IFolder) rel.eContainer();
                         entry.put("previous_folder_id",
                                 currentFolder != null ? currentFolder.getId() : null);

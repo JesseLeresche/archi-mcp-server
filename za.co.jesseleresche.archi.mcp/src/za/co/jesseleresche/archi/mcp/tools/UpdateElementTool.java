@@ -130,6 +130,7 @@ public class UpdateElementTool implements ITool {
                 if (newFolder == null) {
                     throw new Exception("Folder not found: " + newFolderId);
                 }
+                ModelAccessor.requireSection(model, newFolder, IArchimateFactory.eINSTANCE.create(newEClass));
             } else {
                 // Keep in same folder as old element
                 newFolder = element.eContainer() instanceof IFolder f ? f : null;

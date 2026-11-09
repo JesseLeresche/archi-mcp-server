@@ -76,6 +76,7 @@ public class CreateViewTool implements ITool {
             if (targetFolder == null) {
                 throw new Exception("Folder not found: " + folderId);
             }
+            ModelAccessor.requireSection(model, targetFolder, IArchimateFactory.eINSTANCE.createArchimateDiagramModel());
         } else {
             targetFolder = null; // resolved inside syncExec using default
         }

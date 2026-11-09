@@ -91,6 +91,7 @@ public class CreateElementTool implements ITool {
             if (targetFolder == null) {
                 throw new Exception("Folder not found: " + folderId);
             }
+            ModelAccessor.requireSection(model, targetFolder, IArchimateFactory.eINSTANCE.create(eClass));
         } else {
             targetFolder = null;
         }

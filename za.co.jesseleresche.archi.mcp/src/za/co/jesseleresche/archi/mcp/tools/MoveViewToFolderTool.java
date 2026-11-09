@@ -71,6 +71,8 @@ public class MoveViewToFolderTool implements ITool {
             throw new Exception("Folder not found: " + folderId);
         }
 
+        ModelAccessor.requireSection(model, targetFolder, view);
+
         IFolder resolvedTarget = targetFolder;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {

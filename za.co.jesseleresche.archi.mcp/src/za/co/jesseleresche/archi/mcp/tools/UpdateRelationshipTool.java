@@ -220,6 +220,7 @@ public class UpdateRelationshipTool implements ITool {
             if (nf == null) {
                 throw new Exception("Folder not found: " + fid);
             }
+            ModelAccessor.requireSection(model, nf, target);
             IFolder cur = (IFolder) target.eContainer();
             if (cur != null) {
                 cur.getElements().remove(target);

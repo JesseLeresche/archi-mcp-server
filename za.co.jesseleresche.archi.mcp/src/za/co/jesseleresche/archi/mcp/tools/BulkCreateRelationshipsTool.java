@@ -159,8 +159,9 @@ public class BulkCreateRelationshipsTool implements ITool {
                             entries.add(entry);
                             continue;
                         }
+                        ModelAccessor.requireSection(model, folder, relationship);
                     } else if (folderPath != null) {
-                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath);
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath, relationship);
                         if (folder == null) {
                             entry.put("error", "folder_path's top-level segment doesn't match "
                                     + "any root folder: " + folderPath);

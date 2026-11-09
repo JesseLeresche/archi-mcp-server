@@ -96,6 +96,7 @@ public class BulkMoveViewsToFolderTool implements ITool {
                         continue;
                     }
 
+                    ModelAccessor.requireSection(model, targetFolder, view);
                     IFolder currentFolder = (IFolder) view.eContainer();
                     entry.put("previous_folder_id",
                             currentFolder != null ? currentFolder.getId() : null);

@@ -375,6 +375,73 @@ public class ModelAccessor {
     }
 
     /**
+     * Like {@link #findOrCreateFolderByPath(IArchimateModel, String)} but anchored to the section
+     * implied by {@code obj}: a path whose first segment names the object's own section is used
+     * as-is, a first segment naming a different top-level section is rejected, and any other path
+     * (e.g. "Data Flows") is created under the object's section.
+     */
+    public static IFolder findOrCreateFolderByPath(IArchimateModel model, String path, EObject obj)
+            throws Exception {
+        IFolder section = getSectionFor(model, obj);
+        if (section == null) {
+            return findOrCreateFolderByPath(model, path);
+        }
+        String[] segments = path.split("/", 2);
+        for (IFolder f : model.getFolders()) {
+            if (segments[0].equalsIgnoreCase(f.getName())) {
+                if (f != section) {
+                    throw new Exception("folder_path '" + path + "' is under section '" + f.getName()
+                            + "'; " + kindOf(obj) + " must be placed under the '" + section.getName()
+                            + "' section. Use folder_path \"" + section.getName() + "/...\".");
+                }
+                return segments.length > 1 ? findOrCreateFolderByPath(f, segments[1]) : f;
+            }
+        }
+        return findOrCreateFolderByPath(section, path);
+    }
+
+    /** Top-level (section) folder containing {@code folder}, or the folder itself if it is one. */
+    public static IFolder getSectionFolder(IFolder folder) {
+        IFolder current = folder;
+        while (current.eContainer() instanceof IFolder parent) {
+            current = parent;
+        }
+        return current;
+    }
+
+    /** Section folder an object of this kind belongs in (e.g. Relations for relationships). */
+    public static IFolder getSectionFor(IArchimateModel model, EObject obj) {
+        IFolder def = model.getDefaultFolderForObject(obj);
+        return def == null ? null : getSectionFolder(def);
+    }
+
+    /** Section folder for an element/relationship EClass, e.g. "Application". */
+    public static IFolder getSectionFor(IArchimateModel model, EClass eClass) {
+        return getSectionFor(model, com.archimatetool.model.IArchimateFactory.eINSTANCE.create(eClass));
+    }
+
+    private static String kindOf(EObject obj) {
+        if (obj instanceof IArchimateRelationship) return "relationships";
+        if (obj instanceof com.archimatetool.model.IDiagramModel) return "views";
+        return "elements of this type";
+    }
+
+    /**
+     * Rejects a target folder that lives under the wrong top-level section for {@code obj}
+     * (e.g. a relationship into a Views-section folder).
+     */
+    public static void requireSection(IArchimateModel model, IFolder target, EObject obj) throws Exception {
+        IFolder expected = getSectionFor(model, obj);
+        IFolder actual = getSectionFolder(target);
+        if (expected != null && expected != actual) {
+            throw new Exception("folder_id " + target.getId() + " ('" + getFolderPath(target)
+                    + "') is under section '" + actual.getName() + "'; " + kindOf(obj)
+                    + " must be placed under the '" + expected.getName() + "' section. Use folder_path \""
+                    + expected.getName() + "/...\" or a " + expected.getName() + "-section folder.");
+        }
+    }
+
+    /**
      * Returns the root Views folder (the default folder for diagram models).
      */
     public static IFolder getViewsFolder(IArchimateModel model) {

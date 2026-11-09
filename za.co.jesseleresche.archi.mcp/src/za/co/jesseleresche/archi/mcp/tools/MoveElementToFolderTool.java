@@ -71,6 +71,8 @@ public class MoveElementToFolderTool implements ITool {
             throw new Exception("Folder not found: " + folderId);
         }
 
+        ModelAccessor.requireSection(model, targetFolder, element);
+
         IFolder resolvedTarget = targetFolder;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {

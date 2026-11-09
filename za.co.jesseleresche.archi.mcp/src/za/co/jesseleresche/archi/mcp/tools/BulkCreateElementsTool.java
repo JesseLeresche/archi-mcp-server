@@ -134,8 +134,9 @@ public class BulkCreateElementsTool implements ITool {
                             entries.add(entry);
                             continue;
                         }
+                        ModelAccessor.requireSection(model, folder, element);
                     } else if (folderPath != null) {
-                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath);
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath, element);
                         if (folder == null) {
                             entry.put("error", "folder_path's top-level segment doesn't match "
                                     + "any root folder: " + folderPath);

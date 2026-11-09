@@ -107,8 +107,9 @@ public class BulkCreateViewsTool implements ITool {
                             entries.add(entry);
                             continue;
                         }
+                        ModelAccessor.requireSection(model, folder, view);
                     } else if (folderPath != null) {
-                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath);
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath, view);
                         if (folder == null) {
                             entry.put("error", "folder_path's top-level segment doesn't match "
                                     + "any root folder: " + folderPath);
