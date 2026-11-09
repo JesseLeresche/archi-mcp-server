@@ -10,6 +10,7 @@ import org.eclipse.gef.commands.CommandStack;
 import org.eclipse.gef.commands.CompoundCommand;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -58,6 +59,8 @@ public class BulkAddElementsToViewTool implements ITool {
         items.put("type", "object");
         ObjectNode itemProps = items.putObject("properties");
         itemProps.putObject("element_id").put("type", "string");
+        itemProps.putObject("label_expression").put("type", "string")
+                .put("description", "Archi Label Expression, e.g. \"${name}\\n${property:protocol}\"; null/\"\" clears");
         ObjectNode x = itemProps.putObject("x");
         x.put("type", "integer");
         x.put("default", 50);
@@ -161,6 +164,7 @@ public class BulkAddElementsToViewTool implements ITool {
                     bounds.setWidth(w);
                     bounds.setHeight(h);
                     figure.setBounds(bounds);
+                    FigureStyle.applyLabelExpression(item, figure);
 
                     figures.add(figure);
                     containers.add(parentContainer);

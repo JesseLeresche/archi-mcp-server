@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -101,6 +102,11 @@ public class GetViewConnectionsTool implements ITool {
                         c.getArchimateRelationship().getTarget().getName());
                 entry.put("target_figure_id",
                         c.getTarget() != null ? c.getTarget().getId() : null);
+
+                String labelExpr = FigureStyle.getLabelExpression(c);
+                if (labelExpr != null) {
+                    entry.put("label_expression", labelExpr);
+                }
 
                 List<Map<String, Integer>> bendpoints = new ArrayList<>();
                 for (IDiagramModelBendpoint bp : c.getBendpoints()) {

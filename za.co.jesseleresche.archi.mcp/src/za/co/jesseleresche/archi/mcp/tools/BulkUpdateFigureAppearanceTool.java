@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IBounds;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -155,15 +156,10 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                         }
                     }
 
-                    if (item.has("fill_color")) {
-                        fig.setFillColor(item.get("fill_color").asText());
-                    }
-                    if (item.has("font_color")) {
-                        fig.setFontColor(item.get("font_color").asText());
-                    }
-                    if (item.has("line_color")) {
-                        fig.setLineColor(item.get("line_color").asText());
-                    }
+                    FigureStyle.applyColor(item, "fill_color", fig::setFillColor);
+                    FigureStyle.applyColor(item, "font_color", fig::setFontColor);
+                    FigureStyle.applyColor(item, "line_color", fig::setLineColor);
+                    FigureStyle.applyLabelExpression(item, fig);
                     if (item.has("opacity")) {
                         fig.setAlpha(item.get("opacity").asInt());
                     }

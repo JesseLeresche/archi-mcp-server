@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -55,6 +56,8 @@ public class BulkAddRelationshipsToViewTool implements ITool {
         items.put("type", "object");
         ObjectNode itemProps = items.putObject("properties");
         itemProps.putObject("relationship_id").put("type", "string");
+        itemProps.putObject("label_expression").put("type", "string")
+                .put("description", "Archi Label Expression, e.g. \"${name}\\n${property:protocol}\"; null/\"\" clears");
         itemProps.putObject("source_figure_id").put("type", "string");
         itemProps.putObject("target_figure_id").put("type", "string");
         ObjectNode bendpoints = itemProps.putObject("bendpoints");
@@ -183,12 +186,9 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                     if (item.has("text_position")) {
                         connection.setTextPosition(item.get("text_position").asInt());
                     }
-                    if (item.has("line_color")) {
-                        connection.setLineColor(item.get("line_color").asText());
-                    }
-                    if (item.has("font_color")) {
-                        connection.setFontColor(item.get("font_color").asText());
-                    }
+                    FigureStyle.applyColor(item, "line_color", connection::setLineColor);
+                    FigureStyle.applyColor(item, "font_color", connection::setFontColor);
+                    FigureStyle.applyLabelExpression(item, connection);
 
                     entry.put("connection_id", connection.getId());
                 } catch (Exception e) {

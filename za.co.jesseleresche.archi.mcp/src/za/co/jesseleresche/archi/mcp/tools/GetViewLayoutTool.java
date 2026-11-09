@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
@@ -128,6 +129,10 @@ public class GetViewLayoutTool implements ITool {
             entry.put("content", note.getContent());
         }
 
+        String labelExpr = FigureStyle.getLabelExpression(obj);
+        if (labelExpr != null) {
+            entry.put("label_expression", labelExpr);
+        }
         if (obj.eContainer() instanceof IDiagramModelObject parent) {
             entry.put("parent_figure_id", parent.getId());
         }

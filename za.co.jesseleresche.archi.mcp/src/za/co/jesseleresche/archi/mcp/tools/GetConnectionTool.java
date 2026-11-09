@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
@@ -111,6 +112,10 @@ public class GetConnectionTool implements ITool {
         result.put("line_width", connection.getLineWidth());
         result.put("font_color", connection.getFontColor());
         result.put("text_position", connection.getTextPosition());
+        String labelExpr = FigureStyle.getLabelExpression(connection);
+        if (labelExpr != null) {
+            result.put("label_expression", labelExpr);
+        }
         result.put("bendpoints", bendpoints);
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

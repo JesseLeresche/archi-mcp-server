@@ -33,12 +33,13 @@ public class ManageViewContentTool extends ConsolidatedTool {
         return "Add or remove figures and connections on a view. Set 'operation', 'view_id', and "
                 + "pass 'items' as a single object or an array (batch). Returns a result entry per item. "
                 + "Fields by operation — "
-                + "add_element: {element_id, x?, y?, width?, height?, parent_figure_id?}; "
+                + "add_element: {element_id, x?, y?, width?, height?, parent_figure_id?, label_expression?}; "
                 + "add_relationship: {relationship_id, source_figure_id?, target_figure_id?, bendpoints?, "
-                + "text_position?, line_color?, font_color?}; "
+                + "text_position?, line_color?, font_color?, label_expression?}; "
                 + "remove_figure: {figure_id?|element_id?}; "
-                + "update_connection: {connection_id?|relationship_id?, bendpoints?, line_color?, line_width?, font_color?, text_position?}; "
-                + "delete_connection: {connection_id?|relationship_id?}.";
+                + "update_connection: {connection_id?|relationship_id?, bendpoints?, line_color?, line_width?, font_color?, text_position?, label_expression?}; "
+                + "delete_connection: {connection_id?|relationship_id?}. "
+                + "label_expression is an Archi Label Expression (${name}, ${documentation}, ${property:KEY}, \\n); null or \"\" clears it.";
     }
 
     @Override

@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -57,19 +58,24 @@ public class UpdateFigureAppearanceTool implements ITool {
         ObjectNode fillColor = properties.putObject("fill_color");
         fillColor.put("type", "string");
         fillColor.put("description",
-                "Fill/background color as hex string, e.g. \"#FF0000\" "
-                        + "for red");
+                "Fill/background color as hex string, e.g. \"#FF0000\". "
+                        + "Pass null or \"\" to reset to the ArchiMate default; omit to leave unchanged");
 
         ObjectNode fontColor = properties.putObject("font_color");
         fontColor.put("type", "string");
         fontColor.put("description",
-                "Font/text color as hex string, e.g. \"#FFFFFF\" for white");
+                "Font/text color as hex string, e.g. \"#FFFFFF\". "
+                        + "Pass null or \"\" to reset to default; omit to leave unchanged");
 
         ObjectNode lineColor = properties.putObject("line_color");
         lineColor.put("type", "string");
         lineColor.put("description",
-                "Border/line color as hex string, e.g. \"#000000\" "
-                        + "for black");
+                "Border/line color as hex string, e.g. \"#000000\". "
+                        + "Pass null or \"\" to reset to default; omit to leave unchanged");
+
+        properties.putObject("label_expression").put("type", "string")
+                .put("description", "Archi Label Expression, e.g. \"${name}\\n${property:protocol}\". "
+                        + "Pass null or \"\" to clear; omit to leave unchanged");
 
         ObjectNode opacity = properties.putObject("opacity");
         opacity.put("type", "integer");
@@ -137,12 +143,6 @@ public class UpdateFigureAppearanceTool implements ITool {
             }
         }
 
-        String fillColor = args.has("fill_color")
-                ? args.get("fill_color").asText() : null;
-        String fontColor = args.has("font_color")
-                ? args.get("font_color").asText() : null;
-        String lineColor = args.has("line_color")
-                ? args.get("line_color").asText() : null;
         Integer opacity = args.has("opacity")
                 ? args.get("opacity").asInt() : null;
         Integer lineWidth = args.has("line_width")
@@ -153,15 +153,10 @@ public class UpdateFigureAppearanceTool implements ITool {
         IDiagramModelObject fig = diagramObject;
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            if (fillColor != null) {
-                fig.setFillColor(fillColor);
-            }
-            if (fontColor != null) {
-                fig.setFontColor(fontColor);
-            }
-            if (lineColor != null) {
-                fig.setLineColor(lineColor);
-            }
+            FigureStyle.applyColor(args, "fill_color", fig::setFillColor);
+            FigureStyle.applyColor(args, "font_color", fig::setFontColor);
+            FigureStyle.applyColor(args, "line_color", fig::setLineColor);
+            FigureStyle.applyLabelExpression(args, fig);
             if (opacity != null) {
                 fig.setAlpha(opacity);
             }

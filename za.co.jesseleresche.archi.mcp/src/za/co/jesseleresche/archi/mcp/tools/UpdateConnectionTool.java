@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.archimatetool.editor.model.IEditorModelManager;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -80,6 +81,11 @@ public class UpdateConnectionTool implements ITool {
         fontColor.put("type", "string");
         fontColor.put("description", "Label font color as hex string, e.g. \"#000000\"");
 
+        properties.putObject("label_expression").put("type", "string")
+                .put("description", "Archi Label Expression for the connection, e.g. "
+                        + "\"${name}\\nTLS1.3; HTTPS\". Supports ${name}, ${documentation}, "
+                        + "${property:KEY}. Pass null or \"\" to clear; omit to leave unchanged");
+
         ObjectNode textPosition = properties.putObject("text_position");
         textPosition.put("type", "integer");
         textPosition.put("description",
@@ -131,9 +137,7 @@ public class UpdateConnectionTool implements ITool {
         }
 
         JsonNode bendpointsNode = args.has("bendpoints") ? args.get("bendpoints") : null;
-        String lineColor = args.has("line_color") ? args.get("line_color").asText() : null;
         Integer lineWidth = args.has("line_width") ? args.get("line_width").asInt() : null;
-        String fontColor = args.has("font_color") ? args.get("font_color").asText() : null;
         Integer textPosition = args.has("text_position") ? args.get("text_position").asInt() : null;
 
         IDiagramModelArchimateConnection conn = connection;
@@ -151,15 +155,12 @@ public class UpdateConnectionTool implements ITool {
                     conn.getBendpoints().add(bendpoint);
                 }
             }
-            if (lineColor != null) {
-                conn.setLineColor(lineColor);
-            }
+            FigureStyle.applyColor(args, "line_color", conn::setLineColor);
+            FigureStyle.applyLabelExpression(args, conn);
             if (lineWidth != null) {
                 conn.setLineWidth(lineWidth);
             }
-            if (fontColor != null) {
-                conn.setFontColor(fontColor);
-            }
+            FigureStyle.applyColor(args, "font_color", conn::setFontColor);
             if (textPosition != null) {
                 conn.setTextPosition(textPosition);
             }

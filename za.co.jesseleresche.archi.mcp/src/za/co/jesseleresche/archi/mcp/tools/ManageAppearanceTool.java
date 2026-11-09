@@ -25,7 +25,8 @@ public class ManageAppearanceTool extends ConsolidatedTool {
     public String getDescription() {
         return "Style figures or auto-layout a view. Set 'operation'. Fields by operation — "
                 + "set_figure: items (single object or array) {view_id?, figure_id?|element_id?, "
-                + "fill_color?, line_color?, font_color?, opacity?, line_width?, text_alignment?, x?, y?, width?, height?}; "
+                + "fill_color?, line_color?, font_color?, opacity?, line_width?, text_alignment?, label_expression?, x?, y?, width?, height?}; "
+                + "colours: null or \"\" resets to the ArchiMate default, omitted leaves unchanged; "
                 + "layout_view: {view_id, spacing?}. "
                 + "For set_figure, pass a top-level view_id to apply it to every item that omits "
                 + "its own view_id — items may still set their own view_id to style figures "
