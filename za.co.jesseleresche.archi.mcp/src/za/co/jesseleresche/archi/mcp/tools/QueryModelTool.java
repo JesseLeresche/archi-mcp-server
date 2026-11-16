@@ -91,6 +91,8 @@ public class QueryModelTool implements ITool {
                 "With property_key: only elements whose property value starts with this "
                         + "(ignored if property_value is also set).");
 
+        properties.putObject("specialization").put("type", "string")
+                .put("description", "Only return elements with this specialization (exact name).");
         ObjectNode includeProperties = properties.putObject("include_properties");
         includeProperties.put("type", "boolean");
         includeProperties.put("default", false);
@@ -126,6 +128,8 @@ public class QueryModelTool implements ITool {
                 ? args.get("property_value_prefix").asText() : null;
         boolean includeProperties = args != null && args.has("include_properties")
                 && args.get("include_properties").asBoolean(false);
+        String specialization = args != null && args.hasNonNull("specialization")
+                ? args.get("specialization").asText() : null;
 
         List<IArchimateElement> candidates;
 
@@ -162,6 +166,10 @@ public class QueryModelTool implements ITool {
                     || !element.getName().toLowerCase().contains(nameSearch))) {
                 continue;
             }
+            String spec = ModelAccessor.getSpecialization(element);
+            if (specialization != null && !specialization.equals(spec)) {
+                continue;
+            }
             if (propertyKey != null) {
                 boolean found = false;
                 for (IProperty p : element.getProperties()) {
@@ -192,15 +200,11 @@ public class QueryModelTool implements ITool {
             if (doc != null && !doc.isEmpty()) {
                 entry.put("documentation", doc);
             }
+            if (spec != null) {
+                entry.put("specialization", spec);
+            }
             if (includeProperties) {
-                List<Map<String, String>> props = new ArrayList<>();
-                for (IProperty p : element.getProperties()) {
-                    Map<String, String> pEntry = new LinkedHashMap<>();
-                    pEntry.put("key", p.getKey());
-                    pEntry.put("value", p.getValue());
-                    props.add(pEntry);
-                }
-                entry.put("properties", props);
+                entry.put("properties", ModelAccessor.readProperties(element));
             }
             results.add(entry);
         }

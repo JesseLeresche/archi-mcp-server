@@ -1,10 +1,14 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 import org.eclipse.gef.commands.CompoundCommand;
@@ -16,16 +20,20 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
-import com.archimatetool.model.IBounds;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IDiagramModelGroup;
+import com.archimatetool.model.IDiagramModelNote;
 import com.archimatetool.model.IDiagramModelObject;
+import com.archimatetool.model.util.UUIDFactory;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Places multiple existing model elements onto a view as visual figures in a single call.
+ * Adds figures to a view in one undoable step: element figures, groups and notes
+ * ({@code kind}), optionally nested ({@code parent_figure_id}, which may name a figure created
+ * earlier in the same batch), with an optional caller-supplied {@code figure_id} and any
+ * {@link FigureStyle} fields applied at creation.
  */
 public class BulkAddElementsToViewTool implements ITool {
 
@@ -36,54 +44,17 @@ public class BulkAddElementsToViewTool implements ITool {
 
     @Override
     public String getDescription() {
-        return "Place multiple existing model elements onto a view as visual figures in a single call. "
-                + "Returns a result entry per element, with per-item success or error.";
+        return "Add element figures, groups and notes to a view in a single call.";
     }
 
     @Override
     public ObjectNode getInputSchema() {
         ObjectNode schema = ToolRegistry.MAPPER.createObjectNode();
         schema.put("type", "object");
-
-        ObjectNode properties = schema.putObject("properties");
-
-        ObjectNode viewId = properties.putObject("view_id");
-        viewId.put("type", "string");
-        viewId.put("description", "ID of the target view");
-
-        ObjectNode figures = properties.putObject("figures");
-        figures.put("type", "array");
-        figures.put("description", "List of elements to place on the view");
-        ObjectNode items = figures.putObject("items");
-        items.put("type", "object");
-        ObjectNode itemProps = items.putObject("properties");
-        itemProps.putObject("element_id").put("type", "string");
-        itemProps.putObject("label_expression").put("type", "string")
-                .put("description", "Archi Label Expression, e.g. \"${name}\\n${property:protocol}\"; null/\"\" clears");
-        ObjectNode x = itemProps.putObject("x");
-        x.put("type", "integer");
-        x.put("default", 50);
-        ObjectNode y = itemProps.putObject("y");
-        y.put("type", "integer");
-        y.put("default", 50);
-        ObjectNode width = itemProps.putObject("width");
-        width.put("type", "integer");
-        width.put("default", 120);
-        ObjectNode height = itemProps.putObject("height");
-        height.put("type", "integer");
-        height.put("default", 55);
-        ObjectNode parentFigureId = itemProps.putObject("parent_figure_id");
-        parentFigureId.put("type", "string");
-        parentFigureId.put("description",
-                "Optional: ID of a parent figure (group or element) on this view to nest this "
-                        + "element inside. When set, x/y are relative to the parent's client area.");
-        ArrayNode itemRequired = items.putArray("required");
-        itemRequired.add("element_id");
-
-        ArrayNode required = schema.putArray("required");
-        required.add("view_id");
-        required.add("figures");
-
+        ObjectNode props = schema.putObject("properties");
+        props.putObject("view_id").put("type", "string");
+        props.putObject("figures").put("type", "array").putObject("items").put("type", "object");
+        schema.putArray("required").add("view_id").add("figures");
         return schema;
     }
 
@@ -107,80 +78,54 @@ public class BulkAddElementsToViewTool implements ITool {
 
         List<Map<String, Object>> results = UiThreadUtil.syncExec(() -> {
             List<Map<String, Object>> entries = new ArrayList<>();
-            // Pair each validated figure with its target container, then commit them all
-            // through a single CompoundCommand so a batch add undoes in one step.
-            List<IDiagramModelArchimateObject> figures = new ArrayList<>();
+            // Validated figures and their containers, committed through one CompoundCommand so a
+            // batch add undoes in one step. Figures get their IDs up front so later items in the
+            // batch can nest inside earlier ones.
+            List<IDiagramModelObject> figures = new ArrayList<>();
             List<IDiagramModelContainer> containers = new ArrayList<>();
-            List<Map<String, Object>> figureEntries = new ArrayList<>();
+            Map<String, IDiagramModelObject> pending = new HashMap<>();
+            Set<String> claimed = new HashSet<>();
 
             for (JsonNode item : figuresNode) {
                 Map<String, Object> entry = new LinkedHashMap<>();
-                String elementId = item.get("element_id").asText();
-                entry.put("element_id", elementId);
+                entries.add(entry);
                 try {
-                    IArchimateElement element = ModelAccessor.findElementById(model, elementId);
-                    if (element == null) {
-                        entry.put("error", "Element not found: " + elementId);
-                        entries.add(entry);
-                        continue;
-                    }
-
-                    // Resolve the target container. When parent_figure_id is supplied it must
-                    // exist on this view and be a container; otherwise fail explicitly rather
-                    // than silently falling back to top-level placement.
-                    IDiagramModelContainer parentContainer = view;
-                    if (item.hasNonNull("parent_figure_id")) {
-                        String parentFigureId = item.get("parent_figure_id").asText();
-                        IDiagramModelObject parentObj =
-                                ModelAccessor.findDiagramObjectById(view, parentFigureId);
-                        if (parentObj == null) {
-                            entry.put("error", "Parent figure not found on view: " + parentFigureId);
-                            entries.add(entry);
+                    String kind = item.path("kind").asText("element");
+                    entry.put("kind", kind);
+                    String figureId = ModelAccessor.requestedId(item, "figure_id");
+                    if (figureId != null) {
+                        EObject existing = ModelAccessor.claimId(model, figureId, item, claimed);
+                        if (existing != null) {
+                            entry.put("figure_id", figureId);
+                            entry.put("skipped", true);
                             continue;
                         }
-                        if (!(parentObj instanceof IDiagramModelContainer)) {
-                            entry.put("error",
-                                    "Parent figure is not a container (cannot hold children): "
-                                            + parentFigureId);
-                            entries.add(entry);
-                            continue;
-                        }
-                        parentContainer = (IDiagramModelContainer) parentObj;
                     }
 
-                    int x = item.path("x").asInt(50);
-                    int y = item.path("y").asInt(50);
-                    int w = item.path("width").asInt(120);
-                    int h = item.path("height").asInt(55);
-
-                    IDiagramModelArchimateObject figure =
-                            IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
-                    figure.setArchimateElement(element);
-                    IBounds bounds = IArchimateFactory.eINSTANCE.createBounds();
-                    // x/y are parent-relative when nesting; absolute canvas coords at top level.
-                    bounds.setX(x);
-                    bounds.setY(y);
-                    bounds.setWidth(w);
-                    bounds.setHeight(h);
-                    figure.setBounds(bounds);
-                    FigureStyle.applyLabelExpression(item, figure);
+                    IDiagramModelObject figure = create(model, kind, item, entry);
+                    IDiagramModelContainer parent = resolveParent(view, item, pending);
+                    figure.setBounds(item.path("x").asInt(50), item.path("y").asInt(50),
+                            item.path("width").asInt(defaultWidth(kind)),
+                            item.path("height").asInt(defaultHeight(kind)));
+                    FigureStyle.apply(item, figure, model);
+                    figure.setId(figureId != null ? figureId : UUIDFactory.createID(figure));
 
                     figures.add(figure);
-                    containers.add(parentContainer);
-                    // figure_id is assigned once the figure is added to the model (below).
-                    figureEntries.add(entry);
+                    containers.add(parent);
+                    pending.put(figure.getId(), figure);
+                    claimed.add(figure.getId());
+                    entry.put("figure_id", figure.getId());
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());
                 }
-                entries.add(entry);
             }
 
             if (!figures.isEmpty()) {
-                CompoundCommand compound = new CompoundCommand("Add Elements to View");
+                CompoundCommand compound = new CompoundCommand("Add Figures to View");
                 for (int i = 0; i < figures.size(); i++) {
-                    final IDiagramModelArchimateObject figure = figures.get(i);
+                    final IDiagramModelObject figure = figures.get(i);
                     final IDiagramModelContainer container = containers.get(i);
-                    compound.add(new Command("Add Element to View") {
+                    compound.add(new Command("Add Figure to View") {
                         @Override
                         public void execute() {
                             container.getChildren().add(figure);
@@ -192,22 +137,83 @@ public class BulkAddElementsToViewTool implements ITool {
                         }
                     });
                 }
-
                 CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
                 if (stack != null) { stack.execute(compound); } else { compound.execute(); }
-
-                // IDs are assigned when the figures join the model, so read them now.
-                for (int i = 0; i < figures.size(); i++) {
-                    figureEntries.get(i).put("figure_id", figures.get(i).getId());
-                }
                 ModelAccessor.saveModel(model);
             }
-
             return entries;
         });
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
         return ToolRegistry.MAPPER.writeValueAsString(response);
+    }
+
+    private static IDiagramModelObject create(IArchimateModel model, String kind, JsonNode item,
+            Map<String, Object> entry) throws Exception {
+        switch (kind) {
+            case "element": {
+                String elementId = ConsolidatedTool.requireText(item, "element_id");
+                entry.put("element_id", elementId);
+                IArchimateElement element = ModelAccessor.findElementById(model, elementId);
+                if (element == null) {
+                    throw new Exception("Element not found: " + elementId);
+                }
+                IDiagramModelArchimateObject f = IArchimateFactory.eINSTANCE.createDiagramModelArchimateObject();
+                f.setArchimateElement(element);
+                return f;
+            }
+            case "group": {
+                IDiagramModelGroup g = IArchimateFactory.eINSTANCE.createDiagramModelGroup();
+                g.setName(item.path("name").asText("Group"));
+                if (item.hasNonNull("documentation")) {
+                    g.setDocumentation(item.get("documentation").asText());
+                }
+                return g;
+            }
+            case "note": {
+                IDiagramModelNote n = IArchimateFactory.eINSTANCE.createDiagramModelNote();
+                n.setContent(item.path("content").asText(""));
+                return n;
+            }
+            default:
+                throw new Exception("kind must be one of element, group, note (got '" + kind + "')");
+        }
+    }
+
+    /** The view, or the parent figure (on the view or created earlier in this batch). */
+    private static IDiagramModelContainer resolveParent(IArchimateDiagramModel view, JsonNode item,
+            Map<String, IDiagramModelObject> pending) throws Exception {
+        if (!item.hasNonNull("parent_figure_id") || item.get("parent_figure_id").asText().isEmpty()) {
+            return view;
+        }
+        String parentId = item.get("parent_figure_id").asText();
+        IDiagramModelObject parent = pending.get(parentId);
+        if (parent == null) {
+            parent = ModelAccessor.findDiagramObjectById(view, parentId);
+        }
+        if (parent == null) {
+            throw new Exception("Parent figure not found on view: " + parentId);
+        }
+        if (!(parent instanceof IDiagramModelContainer container)) {
+            throw new Exception("Parent figure is not a container (cannot hold children): " + parentId);
+        }
+        return container;
+    }
+
+    private static int defaultWidth(String kind) {
+        return switch (kind) {
+            case "group" -> 400;
+            case "note" -> 185;
+            default -> 120;
+        };
+    }
+
+    private static int defaultHeight(String kind) {
+        return switch (kind) {
+            case "group" -> 140;
+            case "note" -> 80;
+            default -> 55;
+        };
     }
 }

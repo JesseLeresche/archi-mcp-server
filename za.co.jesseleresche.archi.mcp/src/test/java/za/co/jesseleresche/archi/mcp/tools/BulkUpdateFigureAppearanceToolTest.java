@@ -58,7 +58,7 @@ class BulkUpdateFigureAppearanceToolTest {
         f.setFillColor("#111111");
         f.setFontColor("#222222");
         f.setLineColor("#333333");
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'X'}"), f);
+        f.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "X", "");
         String target = "'view_id':'" + v.getId() + "','figure_id':'" + f.getId() + "'";
 
         run(tool, "{'updates':[{" + target + ",'opacity':200}]}");
@@ -72,7 +72,7 @@ class BulkUpdateFigureAppearanceToolTest {
         assertNull(f.getLineColor());
         assertNull(FigureStyle.getLabelExpression(f));
 
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'Y'}"), f);
+        f.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "Y", "");
         run(tool, "{'updates':[{" + target + ",'label_expression':null}]}");
         assertNull(FigureStyle.getLabelExpression(f));
     }
@@ -88,7 +88,7 @@ class BulkUpdateFigureAppearanceToolTest {
                 + "{'view_id':'" + vid + "','figure_id':'x'},"
                 + "{'view_id':'" + vid + "','element_id':'y'}]}").get("results");
         assertTrue(r.get(0).get("error").asText().contains("missing required field 'view_id'"));
-        assertTrue(r.get(1).get("error").asText().contains("Either element_id or figure_id"));
+        assertTrue(r.get(1).get("error").asText().contains("One of figure_id, element_id, connection_id or relationship_id"));
         assertTrue(r.get(2).get("error").asText().contains("View not found: nope"));
         assertTrue(r.get(3).get("error").asText().contains("Figure not found on view: x"));
         assertTrue(r.get(4).get("error").asText().contains("No figure found for element on view: y"));

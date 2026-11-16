@@ -91,6 +91,16 @@ public class ModelAccessor {
         return models.get(0);
     }
 
+    /** An open model by ID or (case-insensitive) name, without changing the selection; null if none. */
+    public static IArchimateModel findModel(String nameOrId) {
+        for (IArchimateModel model : source().getModels()) {
+            if (nameOrId.equals(model.getId()) || nameOrId.equalsIgnoreCase(model.getName())) {
+                return model;
+            }
+        }
+        return null;
+    }
+
     /**
      * Select a model by name or ID. Returns the matched model, or null if not found.
      */
@@ -511,5 +521,141 @@ public class ModelAccessor {
                                 .isSuperTypeOf(ec))
                 .map(c -> (EClass) c)
                 .findFirst().orElse(null);
+    }
+
+    /**
+     * A caller-supplied ID from {@code item[key]}, or null when absent/null.
+     *
+     * @throws Exception if present but empty or whitespace
+     */
+    public static String requestedId(com.fasterxml.jackson.databind.JsonNode item, String key) throws Exception {
+        if (!item.hasNonNull(key)) {
+            return null;
+        }
+        String id = item.get(key).asText();
+        if (id.isBlank()) {
+            throw new Exception("'" + key + "' must not be empty");
+        }
+        return id;
+    }
+
+    /**
+     * Checks a caller-supplied ID against everything in the model (elements, relationships,
+     * views, folders, figures, connections) plus IDs already used earlier in the same batch
+     * ({@code batch}; the caller adds an ID once its object is created). Returns the existing object
+     * when it is taken and {@code on_conflict} is "skip"; returns null when the ID is free.
+     *
+     * @throws Exception when the ID is taken and {@code on_conflict} is "error" (the default)
+     */
+    public static EObject claimId(IArchimateModel model, String id, com.fasterxml.jackson.databind.JsonNode item,
+            java.util.Set<String> batch) throws Exception {
+        String mode = item.path("on_conflict").asText("error");
+        if (!mode.equals("error") && !mode.equals("skip")) {
+            throw new Exception("on_conflict must be 'error' or 'skip'");
+        }
+        EObject existing = com.archimatetool.model.util.ArchimateModelUtils.getObjectByID(model, id);
+        if (existing == null && !batch.contains(id)) {
+            return null;
+        }
+        if (mode.equals("skip") && existing != null) {
+            return existing;
+        }
+        throw new Exception("ID already exists in the model: " + id);
+    }
+
+    /**
+     * Applies {@code properties: [{key, value}]} (existing keys updated in place, new keys
+     * appended, a null value removes the key) and {@code remove_properties: [key, ...]}.
+     * Returns how many properties were actually removed.
+     */
+    public static int applyProperties(com.archimatetool.model.IProperties target,
+            com.fasterxml.jackson.databind.JsonNode item) {
+        int removed = 0;
+        if (item.has("properties") && item.get("properties").isArray()) {
+            for (var prop : item.get("properties")) {
+                String key = prop.path("key").asText();
+                var value = prop.get("value");
+                if (value == null || value.isNull()) {
+                    if (target.getProperties().removeIf(p -> key.equals(p.getKey()))) {
+                        removed++;
+                    }
+                } else {
+                    setProperty(target, key, value.asText());
+                }
+            }
+        }
+        if (item.has("remove_properties") && item.get("remove_properties").isArray()) {
+            for (var keyNode : item.get("remove_properties")) {
+                String key = keyNode.asText();
+                if (target.getProperties().removeIf(p -> key.equals(p.getKey()))) {
+                    removed++;
+                }
+            }
+        }
+        return removed;
+    }
+
+    private static void setProperty(com.archimatetool.model.IProperties target, String key, String value) {
+        for (var prop : target.getProperties()) {
+            if (key.equals(prop.getKey())) {
+                prop.setValue(value);
+                return;
+            }
+        }
+        var p = com.archimatetool.model.IArchimateFactory.eINSTANCE.createProperty();
+        p.setKey(key);
+        p.setValue(value);
+        target.getProperties().add(p);
+    }
+
+    /** Properties as [{key, value}] in model order. */
+    public static List<java.util.Map<String, String>> readProperties(com.archimatetool.model.IProperties target) {
+        List<java.util.Map<String, String>> out = new ArrayList<>();
+        for (var p : target.getProperties()) {
+            java.util.Map<String, String> e = new java.util.LinkedHashMap<>();
+            e.put("key", p.getKey());
+            e.put("value", p.getValue());
+            out.add(e);
+        }
+        return out;
+    }
+
+    /**
+     * Applies {@code specialization} if present: a name sets the concept's (single, primary)
+     * specialization, finding or creating the model profile with that name for the concept's
+     * type; null or "" clears it. Profile images are not created.
+     */
+    public static void applySpecialization(IArchimateModel model, com.archimatetool.model.IArchimateConcept concept,
+            com.fasterxml.jackson.databind.JsonNode item) {
+        if (!item.has("specialization")) {
+            return;
+        }
+        var n = item.get("specialization");
+        concept.getProfiles().clear();
+        if (n.isNull() || n.asText().isEmpty()) {
+            return;
+        }
+        concept.getProfiles().add(findOrCreateProfile(model, n.asText(), concept.eClass().getName()));
+    }
+
+    private static com.archimatetool.model.IProfile findOrCreateProfile(IArchimateModel model, String name,
+            String conceptType) {
+        for (var p : model.getProfiles()) {
+            if (name.equals(p.getName()) && conceptType.equals(p.getConceptType())) {
+                return p;
+            }
+        }
+        var p = com.archimatetool.model.IArchimateFactory.eINSTANCE.createProfile();
+        p.setName(name);
+        p.setConceptType(conceptType);
+        p.setSpecialization(true);
+        model.getProfiles().add(p);
+        return p;
+    }
+
+    /** The concept's specialization name, or null. */
+    public static String getSpecialization(com.archimatetool.model.IArchimateConcept concept) {
+        var p = concept.getPrimaryProfile();
+        return p == null ? null : p.getName();
     }
 }

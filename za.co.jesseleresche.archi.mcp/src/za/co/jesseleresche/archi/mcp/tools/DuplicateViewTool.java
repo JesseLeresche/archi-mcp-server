@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -140,10 +141,7 @@ public class DuplicateViewTool implements ITool {
                             newConn.getBendpoints().add(newBp);
                         }
 
-                        if (oldConn.getLineColor() != null) newConn.setLineColor(oldConn.getLineColor());
-                        newConn.setLineWidth(oldConn.getLineWidth());
-                        if (oldConn.getFontColor() != null) newConn.setFontColor(oldConn.getFontColor());
-                        newConn.setTextPosition(oldConn.getTextPosition());
+                        FigureStyle.copy(oldConn, newConn);
                     } else {
                         IDiagramModelConnection newConn =
                                 IArchimateFactory.eINSTANCE.createDiagramModelConnection();
@@ -159,10 +157,7 @@ public class DuplicateViewTool implements ITool {
                             newConn.getBendpoints().add(newBp);
                         }
 
-                        if (conn.getLineColor() != null) newConn.setLineColor(conn.getLineColor());
-                        newConn.setLineWidth(conn.getLineWidth());
-                        if (conn.getFontColor() != null) newConn.setFontColor(conn.getFontColor());
-                        newConn.setTextPosition(conn.getTextPosition());
+                        FigureStyle.copy(conn, newConn);
                     }
                     connectionCount++;
                 }
@@ -233,10 +228,6 @@ public class DuplicateViewTool implements ITool {
         newBounds.setHeight(oldBounds.getHeight());
         target.setBounds(newBounds);
 
-        if (source.getFillColor() != null) target.setFillColor(source.getFillColor());
-        if (source.getLineColor() != null) target.setLineColor(source.getLineColor());
-        if (source.getFontColor() != null) target.setFontColor(source.getFontColor());
-        target.setAlpha(source.getAlpha());
-        target.setTextAlignment(source.getTextAlignment());
+        FigureStyle.copy(source, target);
     }
 }

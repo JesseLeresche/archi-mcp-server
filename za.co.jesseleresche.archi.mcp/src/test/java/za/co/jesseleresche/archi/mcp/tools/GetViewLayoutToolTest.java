@@ -32,7 +32,7 @@ class GetViewLayoutToolTest {
         IDiagramModelGroup g = models.group(v, "G", 0, 0, 400, 300);
         IArchimateElement a = models.element("BusinessActor", "A");
         IDiagramModelArchimateObject fa = models.figure(g, a, 10, 20, 130, 60);
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'${name}'}"), fa);
+        fa.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "${name}", "");
         IDiagramModelNote n = models.note(v, "hello", 500, 0, 100, 50);
 
         Map<String, JsonNode> byId = new HashMap<>();

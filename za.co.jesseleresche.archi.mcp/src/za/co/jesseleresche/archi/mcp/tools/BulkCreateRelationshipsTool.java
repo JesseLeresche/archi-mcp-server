@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
@@ -99,6 +100,13 @@ public class BulkCreateRelationshipsTool implements ITool {
                     String sourceId = ConsolidatedTool.requireText(item, "source_id");
                     String targetId = ConsolidatedTool.requireText(item, "target_id");
                     String typeName = ConsolidatedTool.requireText(item, "type");
+                    String requestedId = ModelAccessor.requestedId(item, "id");
+                    if (requestedId != null && ModelAccessor.claimId(model, requestedId, item, Set.of()) != null) {
+                        entry.put("id", requestedId);
+                        entry.put("skipped", true);
+                        entries.add(entry);
+                        continue;
+                    }
                     String name = item.has("name") ? item.get("name").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
                     String folderPath = item.has("folder_path") ? item.get("folder_path").asText() : null;
@@ -141,14 +149,22 @@ public class BulkCreateRelationshipsTool implements ITool {
 
                     EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
                     IArchimateRelationship relationship = (IArchimateRelationship) eObject;
+                    if (requestedId != null) {
+                        relationship.setId(requestedId);
+                    }
                     relationship.setSource(source);
                     relationship.setTarget(target);
                     if (name != null) {
                         relationship.setName(name);
                     }
+                    if (item.hasNonNull("documentation")) {
+                        relationship.setDocumentation(item.get("documentation").asText());
+                    }
                     if (accessTypeVal != null && relationship instanceof IAccessRelationship accessRel) {
                         accessRel.setAccessType(accessTypeVal);
                     }
+                    ModelAccessor.applyProperties(relationship, item);
+                    ModelAccessor.applySpecialization(model, relationship, item);
 
                     IFolder folder;
                     if (folderId != null) {

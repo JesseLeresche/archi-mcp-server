@@ -32,6 +32,9 @@ public class SseTransportHandler extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        if (!LocalOriginGuard.check(request, response)) {
+            return;
+        }
 
         response.setContentType("text/event-stream");
         response.setCharacterEncoding("UTF-8");

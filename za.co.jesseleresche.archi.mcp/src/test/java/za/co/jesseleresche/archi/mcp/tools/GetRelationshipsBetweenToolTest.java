@@ -1,5 +1,6 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
+import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import static org.junit.jupiter.api.Assertions.*;
 import static za.co.jesseleresche.archi.mcp.testing.TestModels.run;
 
@@ -59,5 +60,23 @@ class GetRelationshipsBetweenToolTest {
         Exception ex = assertThrows(Exception.class,
                 () -> run(tool, "{'element_a_id':'" + a.getId() + "','element_b_id':'ghost'}"));
         assertEquals("Element not found: ghost", ex.getMessage());
+    }
+
+    @Test
+    void includesPropertiesAndSpecializationWhenAsked() throws Exception {
+        var r = models.relationship("ServingRelationship", a, b);
+        var p = com.archimatetool.model.IArchimateFactory.eINSTANCE.createProperty();
+        p.setKey("k");
+        p.setValue("v");
+        r.getProperties().add(p);
+        ModelAccessor.applySpecialization(models.model, r, TestModels.json("{'specialization':'Feeds'}"));
+        JsonNode out = run(tool, "{'element_a_id':'" + a.getId() + "','element_b_id':'" + b.getId()
+                + "','include_properties':true}").get("results");
+        JsonNode e = null;
+        for (JsonNode x : out) {
+            if (x.get("relationship_id").asText().equals(r.getId())) e = x;
+        }
+        assertEquals("v", e.get("properties").get(0).get("value").asText());
+        assertEquals("Feeds", e.get("specialization").asText());
     }
 }

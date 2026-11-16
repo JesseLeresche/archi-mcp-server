@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
@@ -99,6 +100,13 @@ public class BulkCreateElementsTool implements ITool {
                 try {
                     String name = ConsolidatedTool.requireText(item, "name");
                     String typeName = ConsolidatedTool.requireText(item, "type");
+                    String requestedId = ModelAccessor.requestedId(item, "id");
+                    if (requestedId != null && ModelAccessor.claimId(model, requestedId, item, Set.of()) != null) {
+                        entry.put("id", requestedId);
+                        entry.put("skipped", true);
+                        entries.add(entry);
+                        continue;
+                    }
                     String documentation = item.has("documentation") ? item.get("documentation").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
                     String folderPath = item.has("folder_path") ? item.get("folder_path").asText() : null;
@@ -112,18 +120,15 @@ public class BulkCreateElementsTool implements ITool {
 
                     EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
                     IArchimateElement element = (IArchimateElement) eObject;
+                    if (requestedId != null) {
+                        element.setId(requestedId);
+                    }
                     element.setName(name);
                     if (documentation != null) {
                         element.setDocumentation(documentation);
                     }
-                    if (item.has("properties") && item.get("properties").isArray()) {
-                        for (JsonNode prop : item.get("properties")) {
-                            IProperty p = IArchimateFactory.eINSTANCE.createProperty();
-                            p.setKey(prop.get("key").asText());
-                            p.setValue(prop.get("value").asText());
-                            element.getProperties().add(p);
-                        }
-                    }
+                    ModelAccessor.applyProperties(element, item);
+                    ModelAccessor.applySpecialization(model, element, item);
 
                     IFolder folder;
                     if (folderId != null) {

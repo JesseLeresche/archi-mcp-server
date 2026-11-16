@@ -39,6 +39,7 @@ public class GetRelationshipsBetweenTool implements ITool {
         ObjectNode properties = schema.putObject("properties");
         properties.putObject("element_a_id").put("type", "string");
         properties.putObject("element_b_id").put("type", "string");
+        properties.putObject("include_properties").put("type", "boolean");
         ObjectNode direction = properties.putObject("direction");
         direction.put("type", "string");
         direction.put("default", "either");
@@ -87,6 +88,13 @@ public class GetRelationshipsBetweenTool implements ITool {
             entry.put("relationship_name", rel.getName() != null ? rel.getName() : "");
             entry.put("source_id", srcId);
             entry.put("target_id", tgtId);
+            String spec = ModelAccessor.getSpecialization(rel);
+            if (spec != null) {
+                entry.put("specialization", spec);
+            }
+            if (args.path("include_properties").asBoolean(false)) {
+                entry.put("properties", ModelAccessor.readProperties(rel));
+            }
             matches.add(entry);
         }
 

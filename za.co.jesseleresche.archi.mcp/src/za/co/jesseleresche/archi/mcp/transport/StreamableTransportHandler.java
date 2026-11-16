@@ -32,6 +32,9 @@ public class StreamableTransportHandler extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        if (!LocalOriginGuard.check(request, response)) {
+            return;
+        }
 
         String body = new String(request.getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8);

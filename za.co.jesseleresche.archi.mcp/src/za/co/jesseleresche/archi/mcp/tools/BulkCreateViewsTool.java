@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -89,13 +90,24 @@ public class BulkCreateViewsTool implements ITool {
                     String documentation = item.has("documentation")
                             ? item.get("documentation").asText() : null;
 
+                    String requestedId = ModelAccessor.requestedId(item, "id");
+                    if (requestedId != null && ModelAccessor.claimId(model, requestedId, item, Set.of()) != null) {
+                        entry.put("id", requestedId);
+                        entry.put("skipped", true);
+                        entries.add(entry);
+                        continue;
+                    }
                     IArchimateDiagramModel view =
                             IArchimateFactory.eINSTANCE
                                     .createArchimateDiagramModel();
+                    if (requestedId != null) {
+                        view.setId(requestedId);
+                    }
                     view.setName(name);
                     if (documentation != null) {
                         view.setDocumentation(documentation);
                     }
+                    ModelAccessor.applyProperties(view, item);
 
                     IFolder folder;
                     if (folderId != null) {

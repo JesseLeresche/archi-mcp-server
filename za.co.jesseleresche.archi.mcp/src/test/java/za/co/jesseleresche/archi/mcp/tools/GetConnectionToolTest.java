@@ -42,7 +42,7 @@ class GetConnectionToolTest {
         IDiagramModelBendpoint bp = IArchimateFactory.eINSTANCE.createDiagramModelBendpoint();
         bp.setEndY(42);
         c.getBendpoints().add(bp);
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'${name}'}"), c);
+        c.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "${name}", "");
 
         JsonNode r = run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + c.getId() + "'}");
         assertEquals(rel.getId(), r.get("relationship_id").asText());

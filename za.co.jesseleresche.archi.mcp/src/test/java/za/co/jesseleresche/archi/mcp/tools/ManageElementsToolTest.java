@@ -56,4 +56,28 @@ class ManageElementsToolTest {
         assertTrue(assertThrows(Exception.class, () -> run(tool, "{'operation':'create','items':[]}"))
                 .getMessage().contains("must not be an empty array"));
     }
+
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path exchange;
+
+    @Test
+    void thousandItemBatchFromFileWithSummary() throws Exception {
+        System.setProperty(za.co.jesseleresche.archi.mcp.util.ExchangeDir.PROPERTY, exchange.toString());
+        try {
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < 1000; i++) {
+                sb.append(i == 0 ? "" : ",").append("{\"name\":\"E").append(i)
+                        .append("\",\"type\":\"").append(i == 500 ? "Nope" : "BusinessActor").append("\"}");
+            }
+            java.nio.file.Files.writeString(exchange.resolve("big.json"), sb.append("]").toString());
+            JsonNode r = run(tool, "{'operation':'create','items_file':'big.json','results':'summary'}");
+            assertEquals(1000, r.get("count").asInt());
+            assertEquals(999, r.get("succeeded").asInt());
+            assertEquals(1, r.get("failed").asInt());
+            assertEquals(500, r.get("errors").get(0).get("index").asInt());
+            assertEquals(999, ModelAccessor.collectAllFromFolders(models.model, IArchimateElement.class).size());
+        } finally {
+            System.clearProperty(za.co.jesseleresche.archi.mcp.util.ExchangeDir.PROPERTY);
+        }
+    }
 }

@@ -80,4 +80,42 @@ class BulkCreateElementsToolTest {
         ex = assertThrows(Exception.class, () -> run(tool, "{'elements':[{'name':'A','type':'BusinessActor'}]}"));
         assertEquals("No model is currently open in Archi", ex.getMessage());
     }
+
+    @Test
+    void honoursCallerSuppliedIdsWithConflictModes() throws Exception {
+        String viewId = models.view("V").getId();
+        JsonNode r = run(tool, "{'elements':["
+                + "{'id':'el-1','name':'A','type':'BusinessActor'},"
+                + "{'id':'el-1','name':'Dup in batch','type':'BusinessActor'},"
+                + "{'id':'" + viewId + "','name':'Clashes with a view','type':'BusinessActor'},"
+                + "{'id':'  ','name':'Blank','type':'BusinessActor'},"
+                + "{'id':'el-1','name':'Skip me','type':'BusinessActor','on_conflict':'skip'},"
+                + "{'id':'el-2','name':'B','type':'BusinessActor','on_conflict':'reuse'}]}").get("results");
+        assertEquals("el-1", r.get(0).get("id").asText());
+        assertEquals("A", ModelAccessor.findElementById(models.model, "el-1").getName());
+        assertEquals("ID already exists in the model: el-1", r.get(1).get("error").asText());
+        assertEquals("ID already exists in the model: " + viewId, r.get(2).get("error").asText());
+        assertEquals("'id' must not be empty", r.get(3).get("error").asText());
+        assertTrue(r.get(4).get("skipped").asBoolean());
+        assertEquals("el-1", r.get(4).get("id").asText());
+        assertEquals("on_conflict must be 'error' or 'skip'", r.get(5).get("error").asText());
+        assertEquals(1, ModelAccessor.collectAllFromFolders(models.model, IArchimateElement.class).size());
+        assertEquals("A", ModelAccessor.findElementById(models.model, "el-1").getName(), "skip leaves it unchanged");
+    }
+
+    @Test
+    void setsSpecializationReusingProfilePerNameAndType() throws Exception {
+        JsonNode r = run(tool, "{'elements':["
+                + "{'name':'A','type':'ApplicationComponent','specialization':'Microservice'},"
+                + "{'name':'B','type':'ApplicationComponent','specialization':'Microservice'},"
+                + "{'name':'C','type':'Node','specialization':'Microservice'}]}").get("results");
+        IArchimateElement a = ModelAccessor.findElementById(models.model, r.get(0).get("id").asText());
+        IArchimateElement b = ModelAccessor.findElementById(models.model, r.get(1).get("id").asText());
+        IArchimateElement c = ModelAccessor.findElementById(models.model, r.get(2).get("id").asText());
+        assertEquals("Microservice", a.getPrimaryProfile().getName());
+        assertSame(a.getPrimaryProfile(), b.getPrimaryProfile());
+        assertNotSame(a.getPrimaryProfile(), c.getPrimaryProfile());
+        assertEquals("Node", c.getPrimaryProfile().getConceptType());
+        assertEquals(2, models.model.getProfiles().size());
+    }
 }

@@ -86,6 +86,10 @@ public class GetElementAnalysisTool implements ITool {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("name", element.getName());
         result.put("type", element.eClass().getName());
+        String spec = ModelAccessor.getSpecialization(element);
+        if (spec != null) {
+            result.put("specialization", spec);
+        }
 
         // Collect relationships
         List<IArchimateRelationship> allRelationships =
@@ -163,14 +167,7 @@ public class GetElementAnalysisTool implements ITool {
 
         // Include custom properties
         if (includeProperties && !element.getProperties().isEmpty()) {
-            List<Map<String, String>> props = new ArrayList<>();
-            for (IProperty prop : element.getProperties()) {
-                Map<String, String> entry = new LinkedHashMap<>();
-                entry.put("key", prop.getKey());
-                entry.put("value", prop.getValue());
-                props.add(entry);
-            }
-            result.put("properties", props);
+            result.put("properties", ModelAccessor.readProperties(element));
         }
 
         return ToolRegistry.MAPPER.writeValueAsString(result);

@@ -71,4 +71,20 @@ class GetViewsToolTest {
         Exception e = assertThrows(Exception.class, () -> run(tool, "{}"));
         assertTrue(e.getMessage().contains("No model is currently open"), e.getMessage());
     }
+
+    @Test
+    void includesPropertiesWhenAsked() throws Exception {
+        var v = models.view("Props");
+        var p = com.archimatetool.model.IArchimateFactory.eINSTANCE.createProperty();
+        p.setKey("k");
+        p.setValue("v");
+        v.getProperties().add(p);
+        JsonNode r = run(tool, "{'include_properties':true}");
+        JsonNode entry = null;
+        for (JsonNode e : r) {
+            if (e.get("id").asText().equals(v.getId())) entry = e;
+        }
+        assertEquals("k", entry.get("properties").get(0).get("key").asText());
+        assertFalse(run(tool, "{}").get(0).has("properties"));
+    }
 }

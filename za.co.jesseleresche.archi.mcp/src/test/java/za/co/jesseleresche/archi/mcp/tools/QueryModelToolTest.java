@@ -102,4 +102,15 @@ class QueryModelToolTest {
         Exception e = assertThrows(Exception.class, () -> run(tool, "{}"));
         assertTrue(e.getMessage().contains("No model is currently open"), e.getMessage());
     }
+
+    @Test
+    void returnsAndFiltersBySpecialization() throws Exception {
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        models.element("ApplicationComponent", "B");
+        ModelAccessor.applySpecialization(models.model, a, TestModels.json("{'specialization':'Microservice'}"));
+        JsonNode r = run(tool, "{'specialization':'Microservice'}");
+        assertEquals(1, r.size());
+        assertEquals(a.getId(), r.get(0).get("id").asText());
+        assertEquals("Microservice", r.get(0).get("specialization").asText());
+    }
 }

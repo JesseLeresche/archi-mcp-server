@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 public class GetViewsTool implements ITool {
 
+    private boolean includeProperties;
+
     @Override
     public String getName() {
         return "get_views";
@@ -38,6 +40,8 @@ public class GetViewsTool implements ITool {
 
         ObjectNode properties = schema.putObject("properties");
 
+        properties.putObject("include_properties").put("type", "boolean")
+                .put("description", "If true, include each view's custom properties as [{key, value}].");
         ObjectNode includeElements = properties.putObject("include_elements");
         includeElements.put("type", "boolean");
         includeElements.put("description", "Include element IDs on each view");
@@ -54,6 +58,7 @@ public class GetViewsTool implements ITool {
 
         boolean includeElements = args != null && args.has("include_elements")
                 && args.get("include_elements").asBoolean(false);
+        includeProperties = args != null && args.path("include_properties").asBoolean(false);
 
         List<Map<String, Object>> results = new ArrayList<>();
 
@@ -96,6 +101,9 @@ public class GetViewsTool implements ITool {
                     }
                 }
 
+                if (includeProperties) {
+                    entry.put("properties", ModelAccessor.readProperties(view));
+                }
                 entry.put("element_count", elementCount);
                 if (groupCount > 0) entry.put("group_count", groupCount);
                 if (noteCount > 0) entry.put("note_count", noteCount);

@@ -42,16 +42,21 @@ class UpdateRelationshipToolTest {
     }
 
     @Test
-    void updatesNameDocumentationAndReplacesProperties() throws Exception {
+    void updatesNameDocumentationAndMergesProperties() throws Exception {
         JsonNode r = run(tool, "{'relationship_id':'" + rel.getId() + "','name':'n','documentation':'d',"
-                + "'properties':[{'key':'a','value':'1'},{'key':'b','value':'2'}]}");
+                + "'properties':[{'key':'a','value':'1'},{'key':'b','value':'2'},{'key':'old','value':'y'}]}");
         assertEquals(rel.getId(), r.get("id").asText());
         assertEquals("n", rel.getName());
         assertEquals("d", rel.getDocumentation());
-        assertEquals(2, rel.getProperties().size());
-        assertEquals("a", rel.getProperties().get(0).getKey());
-        assertEquals("2", rel.getProperties().get(1).getValue());
-        assertEquals(1, models.saves);
+        assertEquals(3, rel.getProperties().size());
+        assertEquals("old", rel.getProperties().get(0).getKey());
+        assertEquals("y", rel.getProperties().get(0).getValue());
+        assertEquals("2", rel.getProperties().get(2).getValue());
+        r = run(tool, "{'relationship_id':'" + rel.getId() + "','properties':[{'key':'a','value':null}],"
+                + "'remove_properties':['b','nope']}");
+        assertEquals(2, r.get("removed").asInt());
+        assertEquals(1, rel.getProperties().size());
+        assertEquals(2, models.saves);
     }
 
     @Test
@@ -102,5 +107,17 @@ class UpdateRelationshipToolTest {
         assertEquals("Relationship not found: " + actor.getId(), ex.getMessage());
         ex = assertThrows(Exception.class, () -> run(tool, "{'relationship_id':'" + rel.getId() + "','new_type':'Bogus'}"));
         assertEquals("Unknown relationship type: Bogus", ex.getMessage());
+    }
+
+    @Test
+    void setsAndClearsSpecializationAcrossTypeChange() throws Exception {
+        run(tool, "{'relationship_id':'" + rel.getId() + "','specialization':'Knows'}");
+        assertEquals("Knows", za.co.jesseleresche.archi.mcp.util.ModelAccessor.getSpecialization(rel));
+        run(tool, "{'relationship_id':'" + rel.getId() + "','new_type':'AssignmentRelationship','specialization':'Plays'}");
+        IArchimateRelationship nr = (IArchimateRelationship) ArchimateModelUtils.getObjectByID(models.model, rel.getId());
+        assertEquals("Plays", nr.getPrimaryProfile().getName());
+        assertEquals("AssignmentRelationship", nr.getPrimaryProfile().getConceptType());
+        run(tool, "{'relationship_id':'" + rel.getId() + "','specialization':''}");
+        assertNull(nr.getPrimaryProfile());
     }
 }

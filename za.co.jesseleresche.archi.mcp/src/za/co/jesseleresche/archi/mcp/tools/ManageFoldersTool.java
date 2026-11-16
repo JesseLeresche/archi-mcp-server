@@ -64,7 +64,7 @@ public class ManageFoldersTool extends ConsolidatedTool {
     }
 
     @Override
-    public String execute(JsonNode args) throws Exception {
+    protected String executeOperation(JsonNode args) throws Exception {
         String operation = requireOperation(args);
         switch (operation) {
             case "create":

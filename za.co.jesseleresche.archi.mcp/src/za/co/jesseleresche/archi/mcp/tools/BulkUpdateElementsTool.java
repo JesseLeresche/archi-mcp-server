@@ -152,7 +152,8 @@ public class BulkUpdateElementsTool implements ITool {
                             element.setDocumentation(
                                     item.get("documentation").asText());
                         }
-                        int removed = applyPropertyUpdates(element, item);
+                        int removed = ModelAccessor.applyProperties(element, item);
+                        ModelAccessor.applySpecialization(model, element, item);
                         entry.put("element_id", element.getId());
                         if (item.has("properties") || item.has("remove_properties")) {
                             entry.put("removed", removed);
@@ -230,7 +231,9 @@ public class BulkUpdateElementsTool implements ITool {
             p.setValue(oldProp.getValue());
             newElement.getProperties().add(p);
         }
-        int removed = applyPropertyUpdates(newElement, item);
+        int removed = ModelAccessor.applyProperties(newElement, item);
+        // Specializations are per concept type, so the old one is not carried over.
+        ModelAccessor.applySpecialization(model, newElement, item);
 
         // Place in folder
         IFolder targetFolder = newFolder != null
@@ -267,50 +270,5 @@ public class BulkUpdateElementsTool implements ITool {
             entry.put("removed", removed);
         }
         return entry;
-    }
-
-    /**
-     * Apply {@code properties} (set, or remove on a null value) and {@code remove_properties}.
-     * Returns how many properties were actually removed, so a mistyped or already-absent key
-     * is distinguishable from a successful removal (matching is exact-string only).
-     */
-    private int applyPropertyUpdates(IArchimateElement element, JsonNode item) {
-        int removed = 0;
-        if (item.has("properties") && item.get("properties").isArray()) {
-            for (JsonNode prop : item.get("properties")) {
-                String key = prop.get("key").asText();
-                JsonNode valueNode = prop.get("value");
-                if (valueNode == null || valueNode.isNull()) {
-                    if (element.getProperties().removeIf(p -> key.equals(p.getKey()))) {
-                        removed++;
-                    }
-                } else {
-                    setProperty(element, key, valueNode.asText());
-                }
-            }
-        }
-        if (item.has("remove_properties") && item.get("remove_properties").isArray()) {
-            for (JsonNode keyNode : item.get("remove_properties")) {
-                String key = keyNode.asText();
-                if (element.getProperties().removeIf(p -> key.equals(p.getKey()))) {
-                    removed++;
-                }
-            }
-        }
-        return removed;
-    }
-
-    private void setProperty(IArchimateElement element, String key,
-            String value) {
-        for (IProperty prop : element.getProperties()) {
-            if (key.equals(prop.getKey())) {
-                prop.setValue(value);
-                return;
-            }
-        }
-        IProperty newProp = IArchimateFactory.eINSTANCE.createProperty();
-        newProp.setKey(key);
-        newProp.setValue(value);
-        element.getProperties().add(newProp);
     }
 }

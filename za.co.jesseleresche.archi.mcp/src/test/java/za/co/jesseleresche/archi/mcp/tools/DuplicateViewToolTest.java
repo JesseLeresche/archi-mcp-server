@@ -20,6 +20,7 @@ import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import za.co.jesseleresche.archi.mcp.testing.TestModels;
+import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 
 /**
@@ -107,6 +108,27 @@ class DuplicateViewToolTest {
         // source untouched
         assertEquals(1, ((IDiagramModelArchimateObject) src.getChildren().get(1)).getTargetConnections().size());
         assertEquals(1, models.saves);
+    }
+
+    @Test
+    void copiesFullStyleIncludingFontLineWidthAndLabels() throws Exception {
+        IArchimateDiagramModel src = models.view("Src");
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IDiagramModelArchimateObject fa = models.figure(src, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(src, b, 200, 0, 120, 55);
+        IDiagramModelArchimateConnection c = models.connection(fa, fb, models.relationship("ServingRelationship", a, b));
+        FigureStyle.apply(TestModels.json("{'font':'1|Arial|12.0|1|COCOA|1|Arial-Bold','line_width':3,"
+                + "'gradient':1,'label_expression':'${name}!'}"), fa);
+        FigureStyle.apply(TestModels.json("{'font':'1|Arial|8.0|0|COCOA|1|Arial','line_width':2,"
+                + "'name_visible':false,'label_expression':'${type}'}"), c);
+
+        JsonNode r = run(tool, "{'source_view_id':'" + src.getId() + "','new_name':'Copy'}");
+        IArchimateDiagramModel copy = ModelAccessor.findViewById(models.model, r.get("new_view_id").asText());
+        IDiagramModelArchimateObject ca = ModelAccessor.findFigureByElementId(copy, a.getId());
+        assertEquals(FigureStyle.read(fa), FigureStyle.read(ca));
+        assertEquals(FigureStyle.read(c),
+                FigureStyle.read(ca.getSourceConnections().get(0)));
     }
 
     @Test

@@ -74,4 +74,12 @@ class BulkCreateViewsToolTest {
         models.closeAll();
         fails("No model is currently open", () -> run(tool, "{'views':[{'name':'A'}]}"));
     }
+
+    @Test
+    void setsPropertiesOnCreate() throws Exception {
+        JsonNode r = run(tool, "{'views':[{'name':'V','properties':[{'key':'owner','value':'me'}]}]}").get("results");
+        var v = ModelAccessor.findViewById(models.model, r.get(0).get("id").asText());
+        assertEquals("owner", v.getProperties().get(0).getKey());
+        assertEquals("me", v.getProperties().get(0).getValue());
+    }
 }

@@ -136,8 +136,6 @@ public class UpdateConnectionTool implements ITool {
         }
 
         JsonNode bendpointsNode = args.has("bendpoints") ? args.get("bendpoints") : null;
-        Integer lineWidth = args.has("line_width") ? args.get("line_width").asInt() : null;
-        Integer textPosition = args.has("text_position") ? args.get("text_position").asInt() : null;
 
         IDiagramModelArchimateConnection conn = connection;
 
@@ -154,15 +152,7 @@ public class UpdateConnectionTool implements ITool {
                     conn.getBendpoints().add(bendpoint);
                 }
             }
-            FigureStyle.applyColor(args, "line_color", conn::setLineColor);
-            FigureStyle.applyLabelExpression(args, conn);
-            if (lineWidth != null) {
-                conn.setLineWidth(lineWidth);
-            }
-            FigureStyle.applyColor(args, "font_color", conn::setFontColor);
-            if (textPosition != null) {
-                conn.setTextPosition(textPosition);
-            }
+            FigureStyle.apply(args, conn);
 
             ModelAccessor.saveModel(model);
 

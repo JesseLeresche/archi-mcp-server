@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -128,30 +129,20 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                         continue;
                     }
 
-                    // Resolve source figure
-                    IDiagramModelArchimateObject sourceFigure;
-                    if (item.has("source_figure_id")) {
-                        sourceFigure = ModelAccessor.findFigureById(view, item.get("source_figure_id").asText());
-                    } else {
-                        sourceFigure = ModelAccessor.findFigureByElementId(view, relationship.getSource().getId());
-                    }
+                    IDiagramModelArchimateObject sourceFigure =
+                            endpoint(view, item, "source_figure_id", relationship.getSource());
                     if (sourceFigure == null) {
                         entry.put("error", "Source element '" + relationship.getSource().getName()
-                                + "' not found on view. Call add_element_to_view first.");
+                                + "' not found on view. Add it with add_figure first.");
                         entries.add(entry);
                         continue;
                     }
 
-                    // Resolve target figure
-                    IDiagramModelArchimateObject targetFigure;
-                    if (item.has("target_figure_id")) {
-                        targetFigure = ModelAccessor.findFigureById(view, item.get("target_figure_id").asText());
-                    } else {
-                        targetFigure = ModelAccessor.findFigureByElementId(view, relationship.getTarget().getId());
-                    }
+                    IDiagramModelArchimateObject targetFigure =
+                            endpoint(view, item, "target_figure_id", relationship.getTarget());
                     if (targetFigure == null) {
                         entry.put("error", "Target element '" + relationship.getTarget().getName()
-                                + "' not found on view. Call add_element_to_view first.");
+                                + "' not found on view. Add it with add_figure first.");
                         entries.add(entry);
                         continue;
                     }
@@ -166,9 +157,21 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                         continue;
                     }
 
+                    String connectionId = ModelAccessor.requestedId(item, "connection_id");
+                    if (connectionId != null
+                            && ModelAccessor.claimId(model, connectionId, item, Set.of()) != null) {
+                        entry.put("connection_id", connectionId);
+                        entry.put("skipped", true);
+                        entries.add(entry);
+                        continue;
+                    }
                     IDiagramModelArchimateConnection connection =
                             IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
+                    if (connectionId != null) {
+                        connection.setId(connectionId);
+                    }
                     connection.setArchimateRelationship(relationship);
+                    FigureStyle.apply(item, connection, model); // before connect: a bad field adds nothing
                     connection.connect(sourceFigure, targetFigure);
 
                     if (item.has("bendpoints") && item.get("bendpoints").isArray()) {
@@ -182,12 +185,6 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                             connection.getBendpoints().add(bendpoint);
                         }
                     }
-                    if (item.has("text_position")) {
-                        connection.setTextPosition(item.get("text_position").asInt());
-                    }
-                    FigureStyle.applyColor(item, "line_color", connection::setLineColor);
-                    FigureStyle.applyColor(item, "font_color", connection::setFontColor);
-                    FigureStyle.applyLabelExpression(item, connection);
 
                     entry.put("connection_id", connection.getId());
                 } catch (Exception e) {
@@ -203,5 +200,30 @@ public class BulkAddRelationshipsToViewTool implements ITool {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
         return ToolRegistry.MAPPER.writeValueAsString(response);
+    }
+
+    /**
+     * The figure for one end of a relationship: the given figure ID (any figure on the view,
+     * which must then be an element figure showing that end) or the first figure of that element.
+     */
+    private static IDiagramModelArchimateObject endpoint(IArchimateDiagramModel view, JsonNode item, String key,
+            com.archimatetool.model.IArchimateConcept end) throws Exception {
+        if (!item.hasNonNull(key)) {
+            return ModelAccessor.findFigureByElementId(view, end.getId());
+        }
+        String id = item.get(key).asText();
+        var fig = ModelAccessor.findDiagramObjectById(view, id);
+        if (fig == null) {
+            throw new Exception("Figure not found on view: " + id);
+        }
+        if (!(fig instanceof IDiagramModelArchimateObject f)) {
+            throw new Exception(key + " " + id + " is not an element figure (it is a "
+                    + fig.eClass().getName() + ")");
+        }
+        if (f.getArchimateElement() != end) {
+            throw new Exception(key + " " + id + " does not show '" + end.getName()
+                    + "', the relationship's " + (key.startsWith("source") ? "source" : "target"));
+        }
+        return f;
     }
 }

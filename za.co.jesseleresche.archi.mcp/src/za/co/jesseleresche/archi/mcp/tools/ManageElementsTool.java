@@ -47,7 +47,7 @@ public class ManageElementsTool extends ConsolidatedTool {
     }
 
     @Override
-    public String execute(JsonNode args) throws Exception {
+    protected String executeOperation(JsonNode args) throws Exception {
         String operation = requireOperation(args);
         List<JsonNode> items = normalizeItems(args);
         switch (operation) {

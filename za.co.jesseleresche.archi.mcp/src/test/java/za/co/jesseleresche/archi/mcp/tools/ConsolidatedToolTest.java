@@ -17,7 +17,7 @@ class ConsolidatedToolTest {
         public String getName() { return "probe"; }
         public String getDescription() { return "probe"; }
         public ObjectNode getInputSchema() { return operationItemsSchema(new String[] {"a", "b"}, "things"); }
-        public String execute(JsonNode args) { return "{}"; }
+        protected String executeOperation(JsonNode args) { return "{}"; }
     }
 
     final Probe tool = new Probe();
@@ -83,7 +83,7 @@ class ConsolidatedToolTest {
     void delegatePerItemCollectsPerItemErrors() throws Exception {
         ITool echo = new Probe() {
             @Override
-            public String execute(JsonNode args) {
+            protected String executeOperation(JsonNode args) {
                 if (args.has("fail")) throw new IllegalStateException("bad item");
                 return "{\"ok\":" + args.get("n").asInt() + "}";
             }
@@ -95,7 +95,7 @@ class ConsolidatedToolTest {
 
         ITool bulk = new Probe() {
             @Override
-            public String execute(JsonNode args) {
+            protected String executeOperation(JsonNode args) {
                 return "{\"seen\":" + args.get("elements").size() + "}";
             }
         };
@@ -109,6 +109,46 @@ class ConsolidatedToolTest {
         assertEquals("object", s.get("type").asText());
         assertEquals(2, s.get("properties").get("operation").get("enum").size());
         assertEquals(2, s.get("properties").get("items").get("oneOf").size());
-        assertEquals("[\"operation\",\"items\"]", s.get("required").toString());
+        assertEquals("[\"operation\"]", s.get("required").toString());
+        assertTrue(s.get("properties").has("items_file"));
+        assertTrue(s.get("properties").has("results"));
+    }
+
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path exchange;
+
+    @Test
+    void itemsFileIsReadFromTheExchangeFolderOnly() throws Exception {
+        System.setProperty(za.co.jesseleresche.archi.mcp.util.ExchangeDir.PROPERTY, exchange.toString());
+        try {
+            java.nio.file.Files.writeString(exchange.resolve("batch.json"), "[{\"a\":1},{\"a\":2}]");
+            assertEquals(2, tool.normalizeItems(json("{'items_file':'batch.json'}")).size());
+            assertFails("either 'items' or 'items_file', not both",
+                    () -> tool.normalizeItems(json("{'items':{},'items_file':'batch.json'}")));
+            assertFails("bare .json file name", () -> tool.normalizeItems(json("{'items_file':'../batch.json'}")));
+            assertFails("bare .json file name", () -> tool.normalizeItems(json("{'items_file':'/tmp/batch.json'}")));
+        } finally {
+            System.clearProperty(za.co.jesseleresche.archi.mcp.util.ExchangeDir.PROPERTY);
+        }
+    }
+
+    @Test
+    void summaryResultsCollapseToCounts() throws Exception {
+        ITool tool3 = new Probe() {
+            @Override
+            protected String executeOperation(JsonNode args) {
+                return "{\"results\":[{\"id\":\"a\"},{\"error\":\"boom\"},{\"id\":\"b\",\"skipped\":true}]}";
+            }
+        };
+        JsonNode full = json(tool3.execute(json("{}")));
+        assertEquals(3, full.get("results").size());
+        JsonNode sum = json(tool3.execute(json("{'results':'summary'}")));
+        assertEquals(3, sum.get("count").asInt());
+        assertEquals(2, sum.get("succeeded").asInt());
+        assertEquals(1, sum.get("failed").asInt());
+        assertEquals(1, sum.get("errors").get(0).get("index").asInt());
+        assertEquals("boom", sum.get("errors").get(0).get("error").asText());
+        assertFalse(sum.has("results"));
+        assertFails("'results' must be 'full' or 'summary'", () -> tool3.execute(json("{'results':'some'}")));
     }
 }

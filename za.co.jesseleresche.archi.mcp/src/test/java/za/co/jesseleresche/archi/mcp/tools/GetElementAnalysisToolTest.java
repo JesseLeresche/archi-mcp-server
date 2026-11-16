@@ -1,5 +1,6 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
+import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import static org.junit.jupiter.api.Assertions.*;
 import static za.co.jesseleresche.archi.mcp.testing.TestModels.run;
 
@@ -82,5 +83,11 @@ class GetElementAnalysisToolTest {
     void unknownElementFails() {
         Exception ex = assertThrows(Exception.class, () -> run(tool, "{'element_id':'ghost'}"));
         assertEquals("Element not found: ghost", ex.getMessage());
+    }
+
+    @Test
+    void reportsSpecialization() throws Exception {
+        ModelAccessor.applySpecialization(models.model, actor, TestModels.json("{'specialization':'Customer'}"));
+        assertEquals("Customer", run(tool, "{'element_id':'" + actor.getId() + "'}").get("specialization").asText());
     }
 }

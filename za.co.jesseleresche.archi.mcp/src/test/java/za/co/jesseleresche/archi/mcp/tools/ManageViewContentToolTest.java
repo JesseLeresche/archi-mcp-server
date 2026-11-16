@@ -30,7 +30,7 @@ class ManageViewContentToolTest {
         IArchimateDiagramModel v = models.view("V");
         IDiagramModelGroup g = models.group(v, "G", 0, 0, 400, 300);
         IArchimateElement a = models.element("BusinessActor", "A");
-        JsonNode r = run(tool, "{'operation':'add_element','view_id':'" + v.getId() + "','items':"
+        JsonNode r = run(tool, "{'operation':'add_figure','view_id':'" + v.getId() + "','items':"
                 + "{'element_id':'" + a.getId() + "','parent_figure_id':'" + g.getId() + "','x':15,'y':25}}")
                 .get("results");
         assertEquals(1, r.size());
@@ -51,7 +51,7 @@ class ManageViewContentToolTest {
         String vid = "'view_id':'" + v.getId() + "'";
 
         // stringified items payload is accepted too
-        JsonNode r = run(tool, "{'operation':'add_relationship'," + vid + ",'items':'[{\"relationship_id\":\""
+        JsonNode r = run(tool, "{'operation':'add_connection'," + vid + ",'items':'[{\"relationship_id\":\""
                 + rel.getId() + "\",\"line_color\":\"#ff0000\"}]'}").get("results");
         IDiagramModelArchimateConnection c = ModelAccessor.findConnectionById(v, r.get(0).get("connection_id").asText());
         assertEquals("#ff0000", c.getLineColor());
@@ -67,7 +67,7 @@ class ManageViewContentToolTest {
                 + "','label_expression':''}}");
         assertNull(FigureStyle.getLabelExpression(c));
 
-        run(tool, "{'operation':'delete_connection'," + vid + ",'items':{'relationship_id':'" + rel.getId() + "'}}");
+        run(tool, "{'operation':'remove_connection'," + vid + ",'items':{'relationship_id':'" + rel.getId() + "'}}");
         assertNull(ModelAccessor.findConnectionByRelationshipId(v, rel.getId()));
         assertNotNull(ModelAccessor.findRelationshipById(models.model, rel.getId()));
     }
@@ -91,11 +91,115 @@ class ManageViewContentToolTest {
         Exception e = assertThrows(Exception.class,
                 () -> run(tool, "{'operation':'frob','view_id':'" + vid + "','items':{}}"));
         assertTrue(e.getMessage().contains("Unknown operation 'frob'"));
-        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'add_element','items':{}}"));
+        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'add_figure','items':{}}"));
         assertTrue(e.getMessage().contains("'view_id' is required"));
         e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + vid + "','items':{}}"));
         assertTrue(e.getMessage().contains("'operation' is required"));
-        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'add_element','view_id':'" + vid + "'}"));
+        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'add_figure','view_id':'" + vid + "'}"));
         assertTrue(e.getMessage().contains("'items' is required"));
+    }
+
+    @Test
+    void addFigureCreatesGroupsNotesAndNestedElementsWithStyle() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement e = models.element("ApplicationComponent", "App");
+        String font = "1|Arial|11.0|1|COCOA|1|Arial-Bold";
+        JsonNode r = run(tool, "{'operation':'add_figure','view_id':'" + v.getId() + "','items':["
+                + "{'kind':'group','figure_id':'g-1','name':'Zone','documentation':'d','x':10,'y':10,"
+                + "'width':500,'height':300,'fill_color':'#eeeeee','font':'" + font + "','border_type':1},"
+                + "{'kind':'note','figure_id':'n-1','parent_figure_id':'g-1','content':'Hello','x':5,'y':5,"
+                + "'font_color':'#ff0000','text_alignment':1},"
+                + "{'element_id':'" + e.getId() + "','parent_figure_id':'g-1','x':200,'y':40,"
+                + "'line_color':'#00ff00','font':'" + font + "'}]}").get("results");
+
+        assertEquals("g-1", r.get(0).get("figure_id").asText());
+        assertEquals("group", r.get(0).get("kind").asText());
+        IDiagramModelGroup g = (IDiagramModelGroup) ModelAccessor.findDiagramObjectById(v, "g-1");
+        assertEquals("Zone", g.getName());
+        assertEquals("d", g.getDocumentation());
+        assertEquals(500, g.getBounds().getWidth());
+        assertEquals("#eeeeee", g.getFillColor());
+        assertEquals(font, g.getFont());
+        assertEquals(1, g.getBorderType());
+        assertSame(v, g.eContainer());
+
+        var n = (com.archimatetool.model.IDiagramModelNote) ModelAccessor.findDiagramObjectById(v, "n-1");
+        assertSame(g, n.eContainer());
+        assertEquals("Hello", n.getContent());
+        assertEquals("#ff0000", n.getFontColor());
+        assertEquals(1, n.getTextAlignment());
+
+        IDiagramModelArchimateObject f = ModelAccessor.findFigureByElementId(v, e.getId());
+        assertSame(g, f.eContainer());
+        assertEquals(r.get(2).get("figure_id").asText(), f.getId());
+        assertEquals("#00ff00", f.getLineColor());
+        assertEquals(font, f.getFont());
+    }
+
+    @Test
+    void addFigurePerItemErrorsAndIdConflicts() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement e = models.element("ApplicationComponent", "App");
+        String vid = v.getId();
+        run(tool, "{'operation':'add_figure','view_id':'" + vid + "','items':{'kind':'note','figure_id':'n-1'}}");
+
+        JsonNode r = run(tool, "{'operation':'add_figure','view_id':'" + vid + "','items':["
+                + "{'kind':'blob'},"
+                + "{'kind':'note','figure_id':'n-1'},"
+                + "{'kind':'note','figure_id':'n-1','on_conflict':'skip'},"
+                + "{'kind':'note','figure_id':'   '},"
+                + "{'kind':'group','border_type':7,'figure_type':1},"
+                + "{'element_id':'" + e.getId() + "','border_type':1},"
+                + "{'kind':'note','figure_id':'" + e.getId() + "'}]}").get("results");
+        assertTrue(r.get(0).get("error").asText().contains("kind must be one of element, group, note"));
+        assertTrue(r.get(1).get("error").asText().contains("ID already exists in the model: n-1"));
+        assertTrue(r.get(2).get("skipped").asBoolean());
+        assertEquals("n-1", r.get(2).get("figure_id").asText());
+        assertTrue(r.get(3).get("error").asText().contains("'figure_id' must not be empty"));
+        assertTrue(r.get(4).get("error").asText().contains("'figure_type' does not apply"));
+        assertTrue(r.get(5).get("error").asText().contains("'border_type' does not apply"));
+        assertTrue(r.get(6).get("error").asText().contains("ID already exists in the model: " + e.getId()));
+        assertEquals(1, v.getChildren().size(), "only the first note exists");
+    }
+
+    @Test
+    void addConnectionResolvesEndpointsByFigureIdAndRemoveConnectionKeepsRelationship() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        var g = models.group(v, "G", 0, 0, 400, 300);
+        var fa = models.figure(g, a, 10, 10, 120, 55);
+        var fb = models.figure(v, b, 500, 0, 120, 55);
+        var note = models.note(v, "n", 0, 400, 50, 50);
+        IArchimateRelationship rel = models.relationship("ServingRelationship", a, b);
+        String vid = v.getId();
+
+        JsonNode r = run(tool, "{'operation':'add_connection','view_id':'" + vid + "','items':["
+                + "{'relationship_id':'" + rel.getId() + "','source_figure_id':'" + note.getId() + "'},"
+                + "{'relationship_id':'" + rel.getId() + "','source_figure_id':'" + fb.getId() + "'},"
+                + "{'relationship_id':'" + rel.getId() + "','source_figure_id':'" + fa.getId() + "',"
+                + "'target_figure_id':'" + fb.getId() + "','font':'1|Arial|9.0|0|COCOA|1|Arial','name_visible':false}]}")
+                .get("results");
+        assertTrue(r.get(0).get("error").asText().contains("is not an element figure"), r.toString());
+        assertTrue(r.get(1).get("error").asText().contains("does not show"), r.toString());
+        IDiagramModelArchimateConnection c = ModelAccessor.findConnectionByRelationshipId(v, rel.getId());
+        assertEquals(r.get(2).get("connection_id").asText(), c.getId());
+        assertSame(fa, c.getSource());
+        assertFalse(c.isNameVisible());
+
+        run(tool, "{'operation':'remove_connection','view_id':'" + vid + "','items':{'relationship_id':'" + rel.getId() + "'}}");
+        assertNull(ModelAccessor.findConnectionByRelationshipId(v, rel.getId()));
+        assertNotNull(ModelAccessor.findRelationshipById(models.model, rel.getId()));
+    }
+
+    @Test
+    void oldOperationNamesNameTheirReplacements() {
+        String vid = models.view("V").getId();
+        for (String[] p : new String[][] {{"add_element", "add_figure"}, {"add_relationship", "add_connection"},
+                {"delete_connection", "remove_connection"}}) {
+            Exception e = assertThrows(Exception.class,
+                    () -> run(tool, "{'operation':'" + p[0] + "','view_id':'" + vid + "','items':{}}"));
+            assertTrue(e.getMessage().contains("'" + p[0] + "' was replaced by '" + p[1] + "'"), e.getMessage());
+        }
     }
 }

@@ -104,4 +104,22 @@ class BulkUpdateElementsToolTest {
         Exception ex = assertThrows(Exception.class, () -> run(tool, "{'updates':[]}"));
         assertEquals("'updates' must be a non-empty array", ex.getMessage());
     }
+
+    @Test
+    void setsAndClearsSpecializationAndDropsItOnTypeChange() throws Exception {
+        IArchimateElement e = models.element("ApplicationComponent", "A");
+        run(tool, "{'updates':[{'element_id':'" + e.getId() + "','specialization':'Microservice'}]}");
+        assertEquals("Microservice", ModelAccessor.getSpecialization(e));
+        run(tool, "{'updates':[{'element_id':'" + e.getId() + "','specialization':null}]}");
+        assertNull(ModelAccessor.getSpecialization(e));
+
+        run(tool, "{'updates':[{'element_id':'" + e.getId() + "','specialization':'Microservice'}]}");
+        JsonNode r = run(tool, "{'updates':[{'element_id':'" + e.getId() + "','new_type':'Node'}]}").get("results");
+        IArchimateElement n = ModelAccessor.findElementById(models.model, r.get(0).get("new_id").asText());
+        assertNull(ModelAccessor.getSpecialization(n), "profiles are per concept type");
+        r = run(tool, "{'updates':[{'element_id':'" + n.getId() + "','new_type':'Device','specialization':'Edge'}]}")
+                .get("results");
+        assertEquals("Edge", ModelAccessor.getSpecialization(
+                ModelAccessor.findElementById(models.model, r.get(0).get("new_id").asText())));
+    }
 }

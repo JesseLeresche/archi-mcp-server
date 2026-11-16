@@ -21,14 +21,14 @@ class ManageAppearanceToolTest {
     final ManageAppearanceTool tool = new ManageAppearanceTool();
 
     @Test
-    void setFigureAppliesTopLevelViewIdUnlessItemOverrides() throws Exception {
+    void setStyleAppliesTopLevelViewIdUnlessItemOverrides() throws Exception {
         IArchimateDiagramModel v1 = models.view("V1");
         IArchimateDiagramModel v2 = models.view("V2");
         IDiagramModelArchimateObject f1 = models.figure(v1, models.element("BusinessActor", "A"), 0, 0, 120, 55);
         IDiagramModelArchimateObject f2 = models.figure(v2, models.element("BusinessActor", "B"), 0, 0, 120, 55);
         f2.setLineColor("#333333");
 
-        JsonNode r = run(tool, "{'operation':'set_figure','view_id':'" + v1.getId() + "','items':["
+        JsonNode r = run(tool, "{'operation':'set_style','view_id':'" + v1.getId() + "','items':["
                 + "{'figure_id':'" + f1.getId() + "','fill_color':'#abcdef','label_expression':'${name}'},"
                 + "{'view_id':'" + v2.getId() + "','figure_id':'" + f2.getId() + "','line_color':''}]}")
                 .get("results");
@@ -38,10 +38,53 @@ class ManageAppearanceToolTest {
         assertEquals("${name}", FigureStyle.getLabelExpression(f1));
         assertNull(f2.getLineColor());
 
-        run(tool, "{'operation':'set_figure','items':{'view_id':'" + v1.getId() + "','figure_id':'" + f1.getId()
+        run(tool, "{'operation':'set_style','items':{'view_id':'" + v1.getId() + "','figure_id':'" + f1.getId()
                 + "','fill_color':null,'label_expression':null}}");
         assertNull(f1.getFillColor());
         assertNull(FigureStyle.getLabelExpression(f1));
+    }
+
+    @Test
+    void setStyleTargetsConnectionsByConnectionOrRelationshipId() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        var a = models.element("ApplicationComponent", "A");
+        var b = models.element("ApplicationComponent", "B");
+        var fa = models.figure(v, a, 0, 0, 120, 55);
+        var fb = models.figure(v, b, 200, 0, 120, 55);
+        var rel = models.relationship("ServingRelationship", a, b);
+        var c = models.connection(fa, fb, rel);
+
+        JsonNode r = run(tool, "{'operation':'set_style','view_id':'" + v.getId() + "','items':["
+                + "{'relationship_id':'" + rel.getId() + "','line_color':'#ff0000','font':'1|Arial|9.0|0|COCOA|1|Arial'},"
+                + "{'connection_id':'" + c.getId() + "','line_width':3},"
+                + "{'connection_id':'" + c.getId() + "','fill_color':'#ffffff'},"
+                + "{'connection_id':'" + c.getId() + "','x':5}]}").get("results");
+        assertEquals(c.getId(), r.get(0).get("connection_id").asText());
+        assertEquals("#ff0000", c.getLineColor());
+        assertEquals("1|Arial|9.0|0|COCOA|1|Arial", c.getFont());
+        assertEquals(3, c.getLineWidth());
+        assertTrue(r.get(2).get("error").asText().contains("'fill_color' does not apply"));
+        assertTrue(r.get(3).get("error").asText().contains("bounds"));
+    }
+
+    @Test
+    void setStyleSupportsFullVocabularyOnFigures() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        var g = models.group(v, "G", 0, 0, 300, 200);
+        JsonNode r = run(tool, "{'operation':'set_style','view_id':'" + v.getId() + "','items':"
+                + "{'figure_id':'" + g.getId() + "','border_type':1,'gradient':2,'text_position':2,'font_color':'#010203'}}")
+                .get("results");
+        assertEquals(g.getId(), r.get(0).get("figure_id").asText());
+        assertEquals(1, g.getBorderType());
+        assertEquals(2, g.getGradient());
+        assertEquals(2, g.getTextPosition());
+        assertEquals("#010203", g.getFontColor());
+    }
+
+    @Test
+    void oldOperationNameNamesItsReplacement() {
+        Exception e = assertThrows(Exception.class, () -> run(tool, "{'operation':'set_figure','items':{}}"));
+        assertTrue(e.getMessage().contains("'set_figure' was replaced by 'set_style'"), e.getMessage());
     }
 
     @Test
@@ -59,7 +102,7 @@ class ManageAppearanceToolTest {
         assertTrue(e.getMessage().contains("Unknown operation 'frob'"));
         e = assertThrows(Exception.class, () -> run(tool, "{'items':{}}"));
         assertTrue(e.getMessage().contains("'operation' is required"));
-        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'set_figure','items':[]}"));
+        e = assertThrows(Exception.class, () -> run(tool, "{'operation':'set_style','items':[]}"));
         assertTrue(e.getMessage().contains("'items' must not be an empty array"));
     }
 }

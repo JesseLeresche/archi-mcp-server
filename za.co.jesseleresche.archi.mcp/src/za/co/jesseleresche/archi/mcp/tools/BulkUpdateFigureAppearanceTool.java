@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.archimatetool.model.IBounds;
+import com.archimatetool.model.IIdentifier;
+import org.eclipse.emf.ecore.EObject;
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -113,17 +115,10 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 try {
                     String viewId = ConsolidatedTool.requireText(item, "view_id");
-                    String elementId = item.has("element_id")
-                            ? item.get("element_id").asText() : null;
-                    String figureId = item.has("figure_id")
-                            ? item.get("figure_id").asText() : null;
-
-                    if (elementId == null && figureId == null) {
-                        entry.put("error",
-                                "Either element_id or figure_id must be provided");
-                        entries.add(entry);
-                        continue;
-                    }
+                    String elementId = item.path("element_id").asText(null);
+                    String figureId = item.path("figure_id").asText(null);
+                    String connectionId = item.path("connection_id").asText(null);
+                    String relationshipId = item.path("relationship_id").asText(null);
 
                     IArchimateDiagramModel view =
                             ModelAccessor.findViewById(model, viewId);
@@ -133,43 +128,38 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                         continue;
                     }
 
-                    IDiagramModelObject fig;
+                    EObject target;
+                    String idKey;
                     if (figureId != null) {
-                        fig = ModelAccessor.findDiagramObjectById(view,
-                                figureId);
-                        if (fig == null) {
-                            entry.put("error",
-                                    "Figure not found on view: " + figureId);
-                            entries.add(entry);
-                            continue;
+                        target = ModelAccessor.findDiagramObjectById(view, figureId);
+                        idKey = "figure_id";
+                        if (target == null) throw new Exception("Figure not found on view: " + figureId);
+                    } else if (elementId != null) {
+                        target = ModelAccessor.findFigureByElementId(view, elementId);
+                        idKey = "figure_id";
+                        if (target == null) throw new Exception("No figure found for element on view: " + elementId);
+                    } else if (connectionId != null) {
+                        target = ModelAccessor.findConnectionById(view, connectionId);
+                        idKey = "connection_id";
+                        if (target == null) throw new Exception("Connection not found on view: " + connectionId);
+                    } else if (relationshipId != null) {
+                        target = ModelAccessor.findConnectionByRelationshipId(view, relationshipId);
+                        idKey = "connection_id";
+                        if (target == null) {
+                            throw new Exception("No connection found for relationship on view: " + relationshipId);
                         }
                     } else {
-                        fig = ModelAccessor.findFigureByElementId(view,
-                                elementId);
-                        if (fig == null) {
-                            entry.put("error",
-                                    "No figure found for element on view: "
-                                            + elementId);
-                            entries.add(entry);
-                            continue;
-                        }
+                        throw new Exception("One of figure_id, element_id, connection_id or relationship_id "
+                                + "must be provided");
                     }
 
-                    FigureStyle.applyColor(item, "fill_color", fig::setFillColor);
-                    FigureStyle.applyColor(item, "font_color", fig::setFontColor);
-                    FigureStyle.applyColor(item, "line_color", fig::setLineColor);
-                    FigureStyle.applyLabelExpression(item, fig);
-                    if (item.has("opacity")) {
-                        fig.setAlpha(item.get("opacity").asInt());
+                    boolean hasBounds = item.has("x") || item.has("y") || item.has("width") || item.has("height");
+                    if (hasBounds && !(target instanceof IDiagramModelObject)) {
+                        throw new Exception("bounds (x, y, width, height) apply only to figures");
                     }
-                    if (item.has("line_width")) {
-                        fig.setLineWidth(item.get("line_width").asInt());
-                    }
-                    if (item.has("text_alignment")) {
-                        fig.setTextAlignment(
-                                item.get("text_alignment").asInt());
-                    }
-                    if (item.has("x") || item.has("y") || item.has("width") || item.has("height")) {
+
+                    FigureStyle.apply(item, target);
+                    if (hasBounds && target instanceof IDiagramModelObject fig) {
                         IBounds bounds = fig.getBounds();
                         if (item.has("x")) {
                             bounds.setX(item.get("x").asInt());
@@ -186,7 +176,7 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                         fig.setBounds(bounds);
                     }
 
-                    entry.put("figure_id", fig.getId());
+                    entry.put(idKey, ((IIdentifier) target).getId());
                 } catch (Exception e) {
                     entry.put("error", e.getMessage());
                 }

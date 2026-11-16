@@ -2,8 +2,11 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
+import za.co.jesseleresche.archi.mcp.util.ExchangeDir;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,6 +26,56 @@ abstract class ConsolidatedTool implements ITool {
 
     protected static final ObjectMapper MAPPER = ToolRegistry.MAPPER;
 
+    /** The tool's own routing; {@link #execute} wraps it with the shared {@code results} option. */
+    protected abstract String executeOperation(JsonNode args) throws Exception;
+
+    /**
+     * Runs the operation, then applies {@code results}: "full" (default) returns every per-item
+     * entry; "summary" returns {@code {count, succeeded, failed, errors: [{index, error}]}}
+     * so large batches don't flood the client.
+     */
+    @Override
+    public final String execute(JsonNode args) throws Exception {
+        String mode = args == null ? "full" : args.path("results").asText("full");
+        if (!mode.equals("full") && !mode.equals("summary")) {
+            throw new Exception("'results' must be 'full' or 'summary'");
+        }
+        String out = executeOperation(args);
+        if (mode.equals("full")) {
+            return out;
+        }
+        JsonNode results = MAPPER.readTree(out).get("results");
+        if (results == null || !results.isArray()) {
+            return out; // not a batch response (e.g. a read-only operation)
+        }
+        ObjectNode summary = MAPPER.createObjectNode();
+        ArrayNode errors = MAPPER.createArrayNode();
+        for (int i = 0; i < results.size(); i++) {
+            if (results.get(i).has("error")) {
+                errors.addObject().put("index", i).put("error", results.get(i).get("error").asText());
+            }
+        }
+        summary.put("count", results.size());
+        summary.put("succeeded", results.size() - errors.size());
+        summary.put("failed", errors.size());
+        summary.set("errors", errors);
+        return MAPPER.writeValueAsString(summary);
+    }
+
+    /**
+     * Error for an unsupported operation. Operations renamed in v3.0.0 name their replacement
+     * so a client still using the old name can correct itself.
+     */
+    protected Exception unknownOperation(String operation, Map<String, String> renamed, String... valid) {
+        String replacement = renamed.get(operation);
+        if (replacement != null) {
+            return new Exception("Operation '" + operation + "' was replaced by '" + replacement
+                    + "' in v3.0.0. Valid operations: " + String.join(", ", valid));
+        }
+        return new Exception("Unknown operation '" + operation + "'. Valid operations: "
+                + String.join(", ", valid));
+    }
+
     /** Read the required {@code operation} discriminator. */
     protected String requireOperation(JsonNode args) throws Exception {
         if (args == null || !args.hasNonNull("operation")) {
@@ -33,10 +86,17 @@ abstract class ConsolidatedTool implements ITool {
 
     /**
      * Normalise the {@code items} payload to a list. Accepts either a single object
-     * (treated as a one-element batch) or a non-empty array.
+     * (treated as a one-element batch) or a non-empty array, given inline as {@code items}
+     * or as {@code items_file}, a .json file in the exchange folder (see {@link ExchangeDir}).
      */
     protected List<JsonNode> normalizeItems(JsonNode args) throws Exception {
         JsonNode items = args == null ? null : args.get("items");
+        if (args != null && args.hasNonNull("items_file")) {
+            if (items != null && !items.isNull()) {
+                throw new Exception("Pass either 'items' or 'items_file', not both");
+            }
+            items = ExchangeDir.read(args.get("items_file").asText());
+        }
         if (items == null || items.isNull()) {
             throw new Exception("'items' is required (a single object or an array)");
         }
@@ -147,7 +207,6 @@ abstract class ConsolidatedTool implements ITool {
         addItems(props, itemsDescription);
         ArrayNode required = schema.putArray("required");
         required.add("operation");
-        required.add("items");
         return schema;
     }
 
@@ -162,8 +221,18 @@ abstract class ConsolidatedTool implements ITool {
         }
     }
 
-    /** Add an {@code items} property that accepts a single object or an array of objects. */
+    /**
+     * Add {@code items} (a single object or an array of objects), plus the shared batch options
+     * {@code items_file} and {@code results}.
+     */
     protected void addItems(ObjectNode props, String description) {
+        props.putObject("items_file").put("type", "string").put("description",
+                "Instead of items: a bare .json file name in the exchange folder "
+                        + "(~/.archi-mcp/exchange) holding the items array. Paths are rejected.");
+        props.putObject("results").put("type", "string").put("description",
+                "\"full\" (default) returns an entry per item; \"summary\" returns "
+                        + "{count, succeeded, failed, errors: [{index, error}]}.")
+                .putArray("enum").add("full").add("summary");
         ObjectNode items = props.putObject("items");
         items.put("description", description);
         ArrayNode oneOf = items.putArray("oneOf");

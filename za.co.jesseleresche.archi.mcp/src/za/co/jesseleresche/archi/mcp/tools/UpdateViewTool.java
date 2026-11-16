@@ -75,11 +75,15 @@ public class UpdateViewTool implements ITool {
             if (newDoc != null) {
                 view.setDocumentation(newDoc);
             }
+            int removed = ModelAccessor.applyProperties(view, args);
 
             ModelAccessor.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("view_id", view.getId());
+            if (args.has("properties") || args.has("remove_properties")) {
+                entry.put("removed", removed);
+            }
             return entry;
         });
 

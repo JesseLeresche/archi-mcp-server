@@ -85,6 +85,8 @@ public class UpdateRelationshipTool implements ITool {
         ObjectNode propItemProps = propItems.putObject("properties");
         propItemProps.putObject("key").put("type", "string");
         propItemProps.putObject("value").put("type", "string");
+        properties.putObject("remove_properties").put("type", "array");
+        properties.putObject("specialization").put("type", "string");
         properties.putObject("new_folder_id").put("type", "string")
                 .put("description", "Move the relationship to this folder");
     }
@@ -204,15 +206,11 @@ public class UpdateRelationshipTool implements ITool {
         if (item.has("access_type") && target instanceof IAccessRelationship) {
             ((IAccessRelationship) target).setAccessType(item.get("access_type").asInt());
         }
-        if (item.has("properties") && item.get("properties").isArray()) {
-            target.getProperties().clear();
-            for (JsonNode p : item.get("properties")) {
-                IProperty np = IArchimateFactory.eINSTANCE.createProperty();
-                np.setKey(p.path("key").asText());
-                np.setValue(p.path("value").asText());
-                target.getProperties().add(np);
-            }
+        int removed = ModelAccessor.applyProperties(target, item);
+        if (item.has("properties") || item.has("remove_properties")) {
+            entry.put("removed", removed);
         }
+        ModelAccessor.applySpecialization(model, target, item);
         if (item.has("new_folder_id")) {
             String fid = item.get("new_folder_id").asText();
             IFolder nf = ModelAccessor.findFolderById(model, fid);

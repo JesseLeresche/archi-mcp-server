@@ -68,7 +68,7 @@ class UpdateConnectionToolTest {
         setUp();
         c.setLineColor("#112233");
         c.setFontColor("#445566");
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'X'}"), c);
+        c.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "X", "");
 
         run(tool, "{" + target() + ",'line_width':2}");
         assertEquals("#112233", c.getLineColor());
@@ -79,7 +79,7 @@ class UpdateConnectionToolTest {
         assertNull(c.getFontColor());
         assertNull(FigureStyle.getLabelExpression(c));
 
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'Y'}"), c);
+        c.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "Y", "");
         run(tool, "{" + target() + ",'label_expression':''}");
         assertNull(FigureStyle.getLabelExpression(c));
     }

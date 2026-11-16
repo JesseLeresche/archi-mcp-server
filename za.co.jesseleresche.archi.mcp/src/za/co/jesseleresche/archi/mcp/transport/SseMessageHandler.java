@@ -42,6 +42,9 @@ public class SseMessageHandler extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        if (!LocalOriginGuard.check(request, response)) {
+            return;
+        }
 
         String sessionId = request.getParameter("sessionId");
         AsyncContext async = sseSessions.get(sessionId);

@@ -100,4 +100,34 @@ class BulkCreateRelationshipsToolTest {
         Exception ex = assertThrows(Exception.class, () -> run(tool, "{'relationships':[]}"));
         assertEquals("'relationships' must be a non-empty array", ex.getMessage());
     }
+
+    @Test
+    void honoursCallerSuppliedIdsWithConflictModes() throws Exception {
+        String base = "'source_id':'" + actor.getId() + "','target_id':'" + role.getId() + "','type':'AssignmentRelationship'";
+        JsonNode r = run(tool, "{'relationships':["
+                + "{" + base + ",'id':'rel-1'},"
+                + "{" + base + ",'id':'rel-1'},"
+                + "{" + base + ",'id':'" + actor.getId() + "'},"
+                + "{" + base + ",'id':'rel-1','on_conflict':'skip'},"
+                + "{" + base + ",'id':''}]}").get("results");
+        assertEquals("rel-1", r.get(0).get("id").asText());
+        assertNotNull(rel(r.get(0)));
+        assertEquals("ID already exists in the model: rel-1", r.get(1).get("error").asText());
+        assertEquals("ID already exists in the model: " + actor.getId(), r.get(2).get("error").asText());
+        assertTrue(r.get(3).get("skipped").asBoolean());
+        assertEquals("'id' must not be empty", r.get(4).get("error").asText());
+        assertEquals(1, models.model.getFolder(FolderType.RELATIONS).getElements().size());
+    }
+
+    @Test
+    void setsPropertiesAndSpecializationOnCreate() throws Exception {
+        JsonNode r = run(tool, "{'relationships':[{'source_id':'" + actor.getId() + "','target_id':'" + role.getId()
+                + "','type':'AssignmentRelationship','properties':[{'key':'k','value':'v'}],"
+                + "'specialization':'Plays'}]}").get("results");
+        IArchimateRelationship x = rel(r.get(0));
+        assertEquals("k", x.getProperties().get(0).getKey());
+        assertEquals("v", x.getProperties().get(0).getValue());
+        assertEquals("Plays", x.getPrimaryProfile().getName());
+        assertEquals("AssignmentRelationship", x.getPrimaryProfile().getConceptType());
+    }
 }

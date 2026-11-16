@@ -44,7 +44,7 @@ class GetViewConnectionsToolTest {
         bp.setStartX(7);
         c1.getBendpoints().add(bp);
         c1.setTextPosition(2);
-        FigureStyle.applyLabelExpression(TestModels.json("{'label_expression':'${name}'}"), c1);
+        c1.getFeatures().putString(FigureStyle.LABEL_EXPRESSION, "${name}", "");
         IArchimateRelationship serving = models.relationship("ServingRelationship", other, app);
         models.connection(fOther, fApp, serving);
 
