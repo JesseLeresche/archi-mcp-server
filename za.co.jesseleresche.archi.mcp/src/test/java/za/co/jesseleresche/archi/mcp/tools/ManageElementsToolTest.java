@@ -49,8 +49,11 @@ class ManageElementsToolTest {
 
     @Test
     void rejectsUnknownOperationAndMissingItems() {
-        assertThrows(Exception.class, () -> run(tool, "{'operation':'frob','items':{}}"));
-        assertThrows(Exception.class, () -> run(tool, "{'operation':'create'}"));
-        assertThrows(Exception.class, () -> run(tool, "{'operation':'create','items':[]}"));
+        assertTrue(assertThrows(Exception.class, () -> run(tool, "{'operation':'frob','items':{}}"))
+                .getMessage().contains("Unknown operation 'frob'"));
+        assertTrue(assertThrows(Exception.class, () -> run(tool, "{'operation':'create'}"))
+                .getMessage().contains("'items' is required"));
+        assertTrue(assertThrows(Exception.class, () -> run(tool, "{'operation':'create','items':[]}"))
+                .getMessage().contains("must not be an empty array"));
     }
 }
