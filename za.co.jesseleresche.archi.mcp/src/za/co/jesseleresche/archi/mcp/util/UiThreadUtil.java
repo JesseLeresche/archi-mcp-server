@@ -3,6 +3,7 @@ package za.co.jesseleresche.archi.mcp.util;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.eclipse.swt.widgets.Display;
 
 /**
@@ -13,18 +14,13 @@ import org.eclipse.swt.widgets.Display;
  */
 public class UiThreadUtil {
 
-    /**
-     * Runs a task synchronously on the UI thread. Tests swap in {@code Runnable::run}.
-     */
+    /** Runs a task synchronously on the UI thread. Tests swap in {@code Runnable::run}. */
     private static final Executor DISPLAY = r -> Display.getDefault().syncExec(r);
-
     private static volatile Executor executor = DISPLAY;
 
-    /**
-     * Replace the UI-thread executor; {@code null} restores the Display path.
-     */
+    /** Replace the UI-thread executor; {@code null} restores the Display path. */
     public static void setExecutor(Executor e) {
-        throw new UnsupportedOperationException("stub");
+        executor = e == null ? DISPLAY : e;
     }
 
     /**
@@ -32,14 +28,31 @@ public class UiThreadUtil {
      * Throws RuntimeException if the callable throws.
      */
     public static <T> T syncExec(Callable<T> callable) {
-        throw new UnsupportedOperationException("stub");
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+
+        executor.execute(() -> {
+            try {
+                result.set(callable.call());
+            } catch (Exception e) {
+                error.set(e);
+            }
+        });
+
+        if (error.get() != null) {
+            throw new RuntimeException(error.get().getMessage(), error.get());
+        }
+        return result.get();
     }
 
     /**
      * Variant for void operations that may throw checked exceptions.
      */
     public static void syncExecVoid(ThrowingRunnable runnable) {
-        throw new UnsupportedOperationException("stub");
+        syncExec(() -> {
+            runnable.run();
+            return null;
+        });
     }
 
     /**
@@ -47,7 +60,6 @@ public class UiThreadUtil {
      */
     @FunctionalInterface
     public interface ThrowingRunnable {
-
         void run() throws Exception;
     }
 }
