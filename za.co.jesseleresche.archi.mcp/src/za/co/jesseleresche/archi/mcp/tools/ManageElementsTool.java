@@ -2,6 +2,7 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -12,28 +13,58 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class ManageElementsTool extends ConsolidatedTool {
 
     private final BulkCreateElementsTool create = new BulkCreateElementsTool();
-
     private final BulkUpdateElementsTool update = new BulkUpdateElementsTool();
-
     private final DeleteElementTool delete = new DeleteElementTool();
 
     @Override
     public String getName() {
-        throw new UnsupportedOperationException("stub");
+        return "manage_elements";
     }
 
     @Override
     public String getDescription() {
-        throw new UnsupportedOperationException("stub");
+        return "Create, update, or delete ArchiMate elements. Set 'operation' and pass 'items' "
+                + "as a single object or an array (batch). Returns a result entry per item. "
+                + "Fields by operation — "
+                + "create: {name, type, documentation?, folder_id?|folder_path?, properties?}; "
+                + "update: {element_id, name?, documentation?, new_type?, new_folder_id?, properties?, remove_properties?}; "
+                + "delete: {element_id, dry_run?}. "
+                + "properties is [{key, value}] (insertion order preserved); on update, a null value "
+                + "removes that property, and remove_properties: [key,...] removes by key "
+                + "(result entries then include removed: n, the actual removal count). "
+                + "folder_path (e.g. \"Application/Service domains\") resolves/creates folders by "
+                + "name instead of requiring a prior manage_folders lookup for folder_id. "
+                + "For large delete batches, some MCP clients gate the whole call behind a single "
+                + "destructive-action confirmation — prefer smaller batches if that becomes a problem.";
     }
 
     @Override
     public ObjectNode getInputSchema() {
-        throw new UnsupportedOperationException("stub");
+        return operationItemsSchema(
+                new String[] {"create", "update", "delete"},
+                "Element payload(s): a single object or an array. Fields depend on 'operation' "
+                        + "(see the tool description).");
     }
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        throw new UnsupportedOperationException("stub");
+        String operation = requireOperation(args);
+        List<JsonNode> items = normalizeItems(args);
+        switch (operation) {
+            case "create":
+                return delegateBulk(create, "elements", items);
+            case "update":
+                return delegateBulk(update, "updates", items);
+            case "delete": {
+                List<JsonNode> coerced = new ArrayList<>();
+                for (JsonNode item : items) {
+                    coerced.add(asObject(item, "element_id"));
+                }
+                return delegatePerItem(delete, coerced);
+            }
+            default:
+                throw new Exception("Unknown operation '" + operation
+                        + "'. Valid operations: create, update, delete");
+        }
     }
 }
