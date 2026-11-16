@@ -2,8 +2,10 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
+
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -21,21 +23,88 @@ public class DeleteViewTool implements ITool {
 
     @Override
     public String getName() {
-        throw new UnsupportedOperationException("stub");
+        return "delete_view";
     }
 
     @Override
     public String getDescription() {
-        throw new UnsupportedOperationException("stub");
+        return "Delete a diagram view by ID. Only the visual diagram is removed; "
+                + "underlying model elements and relationships are not affected. "
+                + "Returns the deleted view's name and the number of figures/connections removed.";
     }
 
     @Override
     public ObjectNode getInputSchema() {
-        throw new UnsupportedOperationException("stub");
+        ObjectNode schema = ToolRegistry.MAPPER.createObjectNode();
+        schema.put("type", "object");
+
+        ObjectNode properties = schema.putObject("properties");
+
+        ObjectNode viewId = properties.putObject("view_id");
+        viewId.put("type", "string");
+        viewId.put("description", "ID of the view to delete");
+
+        ArrayNode required = schema.putArray("required");
+        required.add("view_id");
+
+        return schema;
     }
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        throw new UnsupportedOperationException("stub");
+        IArchimateModel model = ModelAccessor.getOpenModel();
+        if (model == null) {
+            throw new Exception("No model is currently open in Archi");
+        }
+
+        String viewId = args.get("view_id").asText();
+
+        IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
+        if (view == null) {
+            throw new Exception("View not found: " + viewId);
+        }
+
+        String viewName = view.getName();
+        var figuresOnView = ModelAccessor.collectAllDiagramObjects(view);
+        int figureCount = figuresOnView.size();
+        int connectionCount = figuresOnView.stream()
+                .mapToInt(f -> f.getSourceConnections().size()).sum();
+
+        Map<String, Object> result = UiThreadUtil.syncExec(() -> {
+            final IFolder[] folderHolder = {(IFolder) view.eContainer()};
+            final int[] indexHolder =
+                    {folderHolder[0].getElements().indexOf(view)};
+
+            CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
+
+            Command cmd = new Command("Delete View") {
+                @Override
+                public void execute() {
+                    folderHolder[0].getElements().remove(view);
+                }
+
+                @Override
+                public void undo() {
+                    folderHolder[0].getElements().add(indexHolder[0], view);
+                }
+            };
+
+            if (stack != null) {
+                stack.execute(cmd);
+            } else {
+                cmd.execute();
+            }
+
+            ModelAccessor.saveModel(model);
+
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("view_id", viewId);
+            entry.put("view_name", viewName);
+            entry.put("figures_removed", figureCount);
+            entry.put("connections_removed", connectionCount);
+            return entry;
+        });
+
+        return ToolRegistry.MAPPER.writeValueAsString(result);
     }
 }
