@@ -127,8 +127,8 @@ public final class FigureStyle {
 
     /** One-paragraph description of the vocabulary for tool descriptions. */
     public static final String VOCABULARY = "Style fields (absent = unchanged, null or \"\" = reset to "
-            + "default): fill_color, line_color, font_color, icon_color (\"#rrggbb\"); font (Archi font "
-            + "string); opacity, line_opacity (0-255); line_width; line_style (figures: 0 solid, 1 dashed, "
+            + "default): fill_color, line_color, font_color, icon_color (\"#rrggbb\"); font (Archi's platform-specific font string — copy one from inspect_view definition rather than composing it, "
+            + "e.g. \"1|Arial|9.0|0|COCOA|1|ArialMT\"; an unknown font name silently renders as the default); opacity, line_opacity (0-255); line_width; line_style (figures: 0 solid, 1 dashed, "
             + "2 dotted, 3 none); text_alignment (1 left, 2 centre, 4 right); text_position (figures: 0 top, "
             + "1 centre, 2 bottom; connections: 0 source, 1 middle, 2 target); gradient (-1 none, 0-3 "
             + "direction); derive_line_color (bool); icon_visible (0 if no image, 1 always, 2 never); "

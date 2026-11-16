@@ -194,7 +194,7 @@ model is an item error, or `{skipped: true}` with `on_conflict: "skip"`.
 
 **Style vocabulary** (shared by `set_style`, `add_figure`, `add_connection`, `update_connection`
 and `inspect_view definition`; absent = unchanged, `null`/`""` = reset to Archi's default):
-`fill_color`, `line_color`, `font_color`, `icon_color`, `font`, `opacity`, `line_opacity`,
+`fill_color`, `line_color`, `font_color`, `icon_color`, `font` (Archi's platform-specific font string, e.g. `1|Arial|9.0|0|COCOA|1|ArialMT` — copy it from a `definition` rather than composing it), `opacity`, `line_opacity`,
 `line_width`, `line_style`, `text_alignment`, `text_position`, `gradient`, `derive_line_color`,
 `icon_visible`, `figure_type`, `border_type`, `image_source`, `image_path`, `image_position`,
 `hide_junction_arrows`, `name_visible`, `label_expression`. A field that doesn't apply to the
