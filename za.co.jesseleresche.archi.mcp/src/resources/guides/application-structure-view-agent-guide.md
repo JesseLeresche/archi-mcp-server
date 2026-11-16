@@ -55,7 +55,7 @@ Sub-components are drawn **physically inside** the parent component's figure on 
 
 1. Create the parent `ApplicationComponent` and all sub-`ApplicationComponent`s with `manage_elements create`.
 2. Create a `CompositionRelationship` in the model from the parent to each sub-component with `manage_relationships create` (`source_id` = parent, `target_id` = sub-component).
-3. Add the parent's figure to the view first with `manage_view_content add_element`, noting its returned figure ID.
+3. Add the parent's figure to the view first with `manage_view_content add_figure`, noting its returned figure ID.
 4. Add each sub-component's figure with `parent_figure_id` set to the parent's figure ID, so it renders nested inside the parent's boundary.
 5. Size the parent figure wide/tall enough to contain all sub-component figures with margin — sub-component figures must not touch or cross the parent's border.
 
@@ -110,11 +110,11 @@ Execute in this order. Do not reorder steps.
 6. manage_relationships create → Realization: each sub-component -> its ApplicationService
 7. manage_relationships create → Access: sub-component(s) -> DataObject(s)
 8. manage_views         create → the view
-9. manage_view_content  add_element → parent component figure
-10. manage_view_content add_element → sub-component figures, each with parent_figure_id = parent figure ID
-11. manage_view_content add_element → ApplicationService and DataObject figures
-12. manage_view_content add_relationship → all connections
-13. manage_appearance   set_figure → apply fill/border colours per Section 6
+9. manage_view_content  add_figure → parent component figure
+10. manage_view_content add_figure → sub-component figures, each with parent_figure_id = parent figure ID
+11. manage_view_content add_figure → ApplicationService and DataObject figures
+12. manage_view_content add_connection → all connections
+13. manage_appearance   set_style → apply fill/border colours per Section 6
 ```
 
 Do NOT call `layout_view` on an Application Structure View — auto-layout will pull sub-component figures out of the parent's nested boundary.

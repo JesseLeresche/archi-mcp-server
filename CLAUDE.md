@@ -33,7 +33,7 @@ Activator → McpServerManager → McpServer (Jetty)
 - **All mutations** must run inside `UiThreadUtil.syncExec()` (Eclipse UI thread)
 - Jetty must bind to `127.0.0.1` only, never `0.0.0.0`
 
-### MCP Tools (consolidated in v2.0.0)
+### MCP Tools (consolidated in v2.0.0, ops renamed in v3.0.0)
 
 Since v2.0.0 the tools are grouped by domain entity. Each `manage_*` tool takes an `operation`
 discriminator plus an `items` payload (a single object **or** an array for batch) and returns a
@@ -45,12 +45,12 @@ uniform `{ "results": [...] }`. The 14 registered tools are:
 | `query_model` | List/filter elements by type, layer, name, or folder |
 | `get_views` | List diagram views with element/group/note counts |
 | `manage_elements` | `create` / `update` / `delete` |
-| `manage_relationships` | `create` / `update` / `delete` |
+| `manage_relationships` | `create` / `update` / `delete` / `valid_types` / `between` |
 | `manage_views` | `create` / `update` / `delete` / `duplicate` |
-| `manage_view_content` | `add_element` / `add_relationship` / `remove_figure` / `update_connection` / `delete_connection` |
-| `manage_folders` | `create` / `move_element` / `move_view` / `list_contents` / `tree` |
-| `manage_appearance` | `set_figure` / `layout_view` |
-| `inspect_view` | `layout` / `connections` / `get_connection` (read-only) |
+| `manage_view_content` | `add_figure` / `remove_figure` / `add_connection` / `update_connection` / `remove_connection` |
+| `manage_folders` | `create` / `delete` / `move_element` / `move_view` / `list_contents` / `tree` |
+| `manage_appearance` | `set_style` / `layout_view` |
+| `inspect_view` | `layout` / `connections` / `get_connection` / `definition` (read-only) |
 | `get_element_analysis` | Inspect an element's relationships, view usage, properties |
 | `validate_model` | Validate relationships against the ArchiMate spec |
 | `export_view_as_image` | Export a view as a PNG (inline + optional disk save) |
@@ -64,12 +64,31 @@ wrapping, so consolidated tools must **never** wrap delegate calls in their own 
 
 ### Important Patterns
 
+- Styling goes through `FigureStyle.apply/read/copy` (one vocabulary for figures and connections); never hand-roll setters in a tool
+- `ConsolidatedTool.execute` is final: subclasses implement `executeOperation`; it handles `results: "summary"`, and `normalizeItems` handles `items_file`
+- Files clients name (`items_file`, `output_file`) go through `ExchangeDir` only — never accept a path
 - All `ITool.execute()` methods return a JSON string (serialized via Jackson) and throw `Exception` on failure
 - Consolidated `manage_*` tools delegate to per-operation tool classes; do not reimplement model logic in them
 - Element/relationship type resolution is case-insensitive against `IArchimatePackage.eINSTANCE`
 - Visual connections use `connection.connect(source, target)` — never manually add to `view.getChildren()`
 - `ModelAccessor.getOpenModel()` returns the first open model or `null`
-- Save after every mutation via `IEditorModelManager.INSTANCE.saveModel(model)`
+- Save after every mutation via `ModelAccessor.saveModel(model)` (never `IEditorModelManager` directly — tests swap the model source)
+
+## Tests
+
+- JUnit 5 tests live in `za.co.jesseleresche.archi.mcp/src/test/java` and run on a plain JVM via
+  `maven-surefire-plugin` during `mvn clean verify` (excluded from the bundle by the
+  tycho-compiler `test/**` exclude; Archi's inner bundle jars are added by an antrun step).
+- Tools are tested through `ITool.execute()` with the `TestModels` JUnit extension
+  (`@RegisterExtension final TestModels models = new TestModels();`): an in-memory model
+  registered via `ModelAccessor.setModelSource`, UI-thread work run inline via
+  `UiThreadUtil.setExecutor`, saves counted. Assert on the returned JSON and the EMF model.
+- `src/test/java/org/eclipse/core/runtime/Platform.java` is a test-only shadow so Archi's
+  `RelationshipsMatrix` can load its XML outside OSGi.
+- New behaviour is written test-first (red, then green). Not covered by unit tests (verify
+  live): `ExportViewAsImageTool` (SWT), `Activator`, `server/`, transport servlets (the
+  Host/Origin rule itself is unit-tested in `LocalOriginGuardTest`).
+- `scripts/StubBodies.java` stubs every method body for red/green characterisation runs.
 
 ## Build
 
@@ -83,7 +102,7 @@ The target platform resolves Archi and Eclipse dependencies from:
 # Build the plugin JAR (ensure JAVA_HOME points to JDK 21)
 JAVA_HOME="$(/usr/libexec/java_home -v 21)" mvn clean verify
 
-# Output: za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-2.4.0.jar
+# Output: za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-3.0.0.jar
 ```
 
 The `lib/` directory (Jetty + Jackson JARs) is downloaded automatically by `maven-dependency-plugin` during build and is gitignored.
@@ -104,4 +123,6 @@ Edit `target-platform/archi-mcp.target` and update the `<location path="...">` t
 ## Configuration
 
 - Default port: `7432` (override with `-Darchi.mcp.port=<port>` system property)
+- Extra allowed Host/Origin names: `-Darchi.mcp.allowed.hosts=a,b` (default: localhost only)
+- Exchange folder for `items_file`/`output_file`: `~/.archi-mcp/exchange` (`-Darchi.mcp.exchange.dir`)
 - MCP protocol version: `2024-11-05`

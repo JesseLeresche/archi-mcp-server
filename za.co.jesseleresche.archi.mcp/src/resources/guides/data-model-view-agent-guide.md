@@ -52,7 +52,7 @@ Database Table A-2  --[association]-->  Database Table A-3   (plain link, no dir
 ## 5. Nesting (Store as Container)
 
 1. Create the parent (store) `DataObject` and all table `DataObject`s with `manage_elements create`.
-2. Add the parent's figure to the view first with `manage_view_content add_element`, noting its returned figure ID.
+2. Add the parent's figure to the view first with `manage_view_content add_figure`, noting its returned figure ID.
 3. Add each table's figure with `parent_figure_id` set to the parent's figure ID.
 4. Size the parent figure to contain all table figures with margin on every side.
 
@@ -98,10 +98,10 @@ Execute in this order. Do not reorder steps.
 2. manage_elements      create → table DataObjects (batch array)
 3. manage_relationships create → Aggregation/Association links between tables (per Section 4)
 4. manage_views         create → the view
-5. manage_view_content  add_element → parent (store) figure
-6. manage_view_content  add_element → table figures, each with parent_figure_id = parent figure ID
-7. manage_view_content  add_relationship → table-to-table connections
-8. manage_appearance    set_figure → apply fill/border colours per Section 7
+5. manage_view_content  add_figure → parent (store) figure
+6. manage_view_content  add_figure → table figures, each with parent_figure_id = parent figure ID
+7. manage_view_content  add_connection → table-to-table connections
+8. manage_appearance    set_style → apply fill/border colours per Section 7
 ```
 
 Do NOT call `layout_view` on a Data Model View — auto-layout will pull table figures out of the parent store's nested boundary.

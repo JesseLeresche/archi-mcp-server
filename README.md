@@ -158,6 +158,10 @@ Restart Claude Code (or run `/mcp` to reload servers). Archi tools will appear a
 
 Use `POST http://localhost:7432/mcp` as the single-endpoint Streamable HTTP connector.
 
+Since v3.0.0 the MCP endpoints reject requests whose `Host` (or `Origin`, when sent) isn't
+`localhost`, `127.0.0.1` or `[::1]`. If you reach Archi through a tunnel or reverse proxy that
+forwards its own host name, allow it with `-Darchi.mcp.allowed.hosts=<host>`.
+
 ---
 
 ## Available Tools
@@ -171,32 +175,55 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 > **Migration from v1.x:** the old per-operation tool names (`create_element`, `bulk_create_elements`,
 > `add_element_to_view`, `delete_view`, …) were removed. Use the consolidated tools below — e.g.
 > `create_element` → `manage_elements` with `operation: "create"`; `bulk_add_elements_to_view`
-> → `manage_view_content` with `operation: "add_element"`.
+> → `manage_view_content` with `operation: "add_figure"`.
+>
+> **Migration to v3.0.0 (breaking):** four operations were renamed so figures and connections pair
+> up by noun — `set_figure` → `set_style`, `add_element` → `add_figure`, `add_relationship` →
+> `add_connection`, `delete_connection` → `remove_connection`. The old names return an error that
+> names the replacement. `manage_relationships update` now *merges* `properties` (like elements)
+> instead of replacing the whole list.
+
+**Batch options (every `manage_*` tool):** `items` may be replaced by `items_file`, a bare `.json`
+file name in the exchange folder `~/.archi-mcp/exchange` (override with
+`-Darchi.mcp.exchange.dir=<dir>`; paths and symlinks are rejected). `results: "summary"` returns
+`{count, succeeded, failed, errors: [{index, error}]}` instead of one entry per item.
+
+**Caller-supplied IDs:** `create` on elements, relationships and views accepts `id`;
+`add_figure` accepts `figure_id`, `add_connection` accepts `connection_id`. An ID already in the
+model is an item error, or `{skipped: true}` with `on_conflict: "skip"`.
+
+**Style vocabulary** (shared by `set_style`, `add_figure`, `add_connection`, `update_connection`
+and `inspect_view definition`; absent = unchanged, `null`/`""` = reset to Archi's default):
+`fill_color`, `line_color`, `font_color`, `icon_color`, `font`, `opacity`, `line_opacity`,
+`line_width`, `line_style`, `text_alignment`, `text_position`, `gradient`, `derive_line_color`,
+`icon_visible`, `figure_type`, `border_type`, `image_source`, `image_path`, `image_position`,
+`hide_junction_arrows`, `name_visible`, `label_expression`. A field that doesn't apply to the
+target (e.g. `border_type` on an element figure) is an item error.
 
 ### Model session & querying
 
 | Tool | Description |
 |------|-------------|
 | `manage_models` | `operation: list \| select` — list open models, or switch the active model by name/ID |
-| `query_model` | Filter elements by ArchiMate type, layer, name, folder, or custom property (`property_key`/`property_value`/`property_value_prefix`); `include_properties` returns each element's custom properties |
-| `get_views` | List diagram views with element, group, and note counts |
+| `query_model` | Filter elements by ArchiMate type, layer, name, folder, `specialization`, or custom property (`property_key`/`property_value`/`property_value_prefix`); `include_properties` returns each element's custom properties |
+| `get_views` | List diagram views with element, group, and note counts; `include_properties` returns each view's properties |
 
 ### Authoring & editing (write)
 
 | Tool | Operations | Description |
 |------|-----------|-------------|
-| `manage_elements` | `create / update / delete` | Element CRUD. `create` and `update` accept `properties`; `update` removes a property via a `null` value or `remove_properties: [key,...]`. Update supports type changes (`new_type`); delete supports `dry_run`. `create` accepts `folder_path` as an alternative to `folder_id` |
-| `manage_relationships` | `create / update / delete / valid_types / between` | Relationship CRUD, plus read-only lookups: `valid_types` returns which relationship types the ArchiMate spec allows between a source/target pair, `between` finds existing relationships already connecting a pair. Type changes preserve ID and view connections; delete supports `dry_run`; `create` accepts `folder_path` as an alternative to `folder_id` and its results include `folder_path` |
-| `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections. `delete` reports the removed view's name and figure/connection counts; `create` accepts `folder_path` as an alternative to `folder_id` |
-| `manage_view_content` | `add_element / add_relationship / remove_figure / update_connection / delete_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level). `add_relationship` accepts `text_position`/`line_color`/`font_color` at creation time, not just via a follow-up `update_connection` |
+| `manage_elements` | `create / update / delete` | Element CRUD. `create` and `update` accept `properties` and `specialization`; `update` removes a property via a `null` value or `remove_properties: [key,...]`. `create` accepts `id` + `on_conflict`. Update supports type changes (`new_type`); delete supports `dry_run`. `create` accepts `folder_path` as an alternative to `folder_id` |
+| `manage_relationships` | `create / update / delete / valid_types / between` | Relationship CRUD, plus read-only lookups: `valid_types` returns which relationship types the ArchiMate spec allows between a source/target pair, `between` finds existing relationships already connecting a pair. Type changes preserve ID and view connections; delete supports `dry_run`; `create` accepts `id` + `on_conflict`, `documentation`, `properties`, `specialization` and `folder_path` as an alternative to `folder_id`; `update` merges `properties` and sets `specialization`; `between` accepts `include_properties` |
+| `manage_views` | `create / update / delete / duplicate` | View management, including cloning a view with all figures/connections. `delete` reports the removed view's name and figure/connection counts; `create` accepts `id`, `properties` and `folder_path` as an alternative to `folder_id`; `update` accepts `properties` |
+| `manage_view_content` | `add_figure / remove_figure / add_connection / update_connection / remove_connection` | Place/remove figures and draw/edit connections on a view (`view_id` given once at top level). `add_figure` adds element figures, groups or notes (`kind`), nested via `parent_figure_id` (which may name a figure added earlier in the same batch), styled at creation. `remove_connection` removes only the drawing — delete the relationship with `manage_relationships delete` |
 | `manage_folders` | `create / delete / move_element / move_view / list_contents / tree` | Create or delete folders (delete requires the folder to be empty), move elements/relationships/views, and inspect the folder hierarchy |
-| `manage_appearance` | `set_figure / layout_view` | Style figures (fill/font/line color, opacity, width, alignment), reposition/resize them (`x`/`y`/`width`/`height`), or auto-layout a view. `set_figure` accepts a top-level `view_id` applied to items that omit their own |
+| `manage_appearance` | `set_style / layout_view` | Style figures or connections with the full style vocabulary (target by `figure_id`, `element_id`, `connection_id` or `relationship_id`), reposition/resize figures (`x`/`y`/`width`/`height`), or auto-layout a view. `set_style` accepts a top-level `view_id` applied to items that omit their own |
 
 ### Inspection & analysis (read)
 
 | Tool | Description |
 |------|-------------|
-| `inspect_view` | `operation: layout \| connections \| get_connection` — figure positions/sizes, connections on a view, or one connection's visual properties |
+| `inspect_view` | `operation: layout \| connections \| get_connection \| definition` — figure positions/sizes, connections on a view, one connection's visual properties, or a full replayable definition (`model` to read another open model, `output_file` to write it to the exchange folder) |
 | `get_element_analysis` | Inspect an element's relationships, view usage (including each figure's geometry and colors), and properties |
 | `validate_model` | Validate all relationships against the ArchiMate specification, reporting violations with valid alternatives. Optional convention checks: `require_properties`, `check_orphans`, `property_vocabularies` |
 
@@ -249,6 +276,8 @@ guide](CONTRIBUTING.md#adding-a-new-view-type-guide) in CONTRIBUTING.md, and sta
 |----------|---------|-------------|
 | `archi.mcp.port` | `7432` | HTTP port. Override with `-Darchi.mcp.port=<port>` JVM arg |
 | Bind address | `127.0.0.1` | Loopback only — not configurable |
+| `archi.mcp.allowed.hosts` | _(none)_ | Extra `Host`/`Origin` host names accepted besides localhost, comma-separated (e.g. a tunnel) |
+| `archi.mcp.exchange.dir` | `~/.archi-mcp/exchange` | Folder for `items_file` / `output_file` |
 | MCP version | `2024-11-05` | Protocol version advertised to clients |
 
 To set a custom port, add the JVM argument in Archi's `Archi.ini`:

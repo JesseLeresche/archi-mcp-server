@@ -68,13 +68,13 @@ com.archimatetool.mcp/
 │       │   ├── ITool.java
 │       │   ├── QueryModelTool.java
 │       │   ├── GetViewsTool.java
-│       │   ├── CreateElementTool.java
-│       │   ├── CreateRelationshipTool.java
-│       │   ├── CreateViewTool.java
-│       │   ├── AddElementToViewTool.java
-│       │   └── AddRelationshipToViewTool.java
+│       │   ├── ConsolidatedTool.java      (base of the manage_* tools)
+│       │   ├── Manage*Tool.java / InspectViewTool.java (registered, pure routing)
+│       │   └── Bulk*/Get*/Update*/Delete*Tool.java     (internal per-operation helpers)
 │       └── util/
 │           ├── ModelAccessor.java
+│           ├── FigureStyle.java          (the one style vocabulary)
+│           ├── ExchangeDir.java          (sandboxed items_file / output_file)
 │           └── UiThreadUtil.java
 ├── lib/
 │   ├── jetty-server-11.0.20.jar
@@ -421,13 +421,20 @@ public class ToolRegistry {
     private final Map<String, ITool> tools = new LinkedHashMap<>();
 
     public ToolRegistry() {
+        register(new ManageModelsTool());
         register(new QueryModelTool());
         register(new GetViewsTool());
-        register(new CreateElementTool());
-        register(new CreateRelationshipTool());
-        register(new CreateViewTool());
-        register(new AddElementToViewTool());
-        register(new AddRelationshipToViewTool());
+        register(new ManageElementsTool());
+        register(new ManageRelationshipsTool());
+        register(new ManageViewsTool());
+        register(new ManageViewContentTool());
+        register(new ManageFoldersTool());
+        register(new ManageAppearanceTool());
+        register(new InspectViewTool());
+        register(new GetElementAnalysisTool());
+        register(new ValidateModelTool());
+        register(new ExportViewAsImageTool());
+        register(new CreateSdOverviewViewTool());
     }
 
     private void register(ITool tool) {
@@ -505,203 +512,64 @@ are `IDiagramModelArchimateObject`.
 
 ---
 
-### CreateElementTool — `create_element`
+### v3.0.0 contract for the write tools
 
-**Description**: Create a new ArchiMate element and add it to the model's default folder
-for that type.
+Every `manage_*` tool takes `operation` plus `items` (one object or an array), or instead
+`items_file`: a bare `.json` file name in the exchange folder `~/.archi-mcp/exchange`
+(override `-Darchi.mcp.exchange.dir`). Paths, symlinks and non-`.json` names are rejected;
+files over 20 MB are refused. `results: "summary"` replaces the per-item list with
+`{count, succeeded, failed, errors: [{index, error}]}`.
 
-**Input schema**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "name":          {"type": "string"},
-    "type":          {"type": "string", "description": "ArchiMate element type"},
-    "documentation": {"type": "string"}
-  },
-  "required": ["name", "type"]
-}
-```
+**Caller-supplied IDs.** `manage_elements` / `manage_relationships` / `manage_views` `create`
+accept `id`; `add_figure` accepts `figure_id`; `add_connection` accepts `connection_id`.
+Empty or whitespace IDs are an item error. An ID already used anywhere in the model (or
+earlier in the same batch) is an item error unless `on_conflict: "skip"`, which reports
+`{id, skipped: true}` and leaves the existing object unchanged.
 
-**Implementation**:
-1. Resolve the `EClass` from `IArchimatePackage.eINSTANCE` by matching type name
-   case-insensitively.
-2. Throw if not found or if the EClass is not a subtype of `IArchimateElement`.
-3. Inside `UiThreadUtil.syncExec`:
-   - Create via `IArchimateFactory.eINSTANCE.create(eClass)`
-   - Set name and documentation
-   - Add to `model.getDefaultFolderForObject(element).getElements()`
-   - Call `IEditorModelManager.INSTANCE.saveModel(model)`
-4. Return `{"id":..., "name":..., "type":..., "success":true}`.
+**Properties and specialisations.** `properties: [{key, value}]` on element, relationship
+and view create/update (existing keys updated in place, a `null` value removes the key,
+`remove_properties: [key]` removes by key; updates report `removed: n`).
+`specialization: "<name>"` on element and relationship create/update finds or creates the
+model profile with that name for the concept's type and makes it the concept's
+specialisation; `null`/`""` clears it. `query_model` and `get_element_analysis` return it;
+`query_model` filters on it.
 
----
+**View content** (`manage_view_content`, `view_id` given once):
 
-### CreateRelationshipTool — `create_relationship`
+| Operation | Item |
+|---|---|
+| `add_figure` | `{kind?: element\|group\|note, element_id (element), name?, documentation? (group), content? (note), x?, y?, width?, height?, parent_figure_id?, figure_id?, on_conflict?, <style>}` |
+| `remove_figure` | `{figure_id?\|element_id?}` |
+| `add_connection` | `{relationship_id, source_figure_id?, target_figure_id?, connection_id?, bendpoints?, <style>}` |
+| `update_connection` | `{connection_id?\|relationship_id?, bendpoints?, <style>}` |
+| `remove_connection` | `{connection_id?\|relationship_id?}`: removes the drawing only; delete the relationship with `manage_relationships delete` |
 
-**Description**: Create an ArchiMate relationship between two existing elements.
+`parent_figure_id` may name a figure added earlier in the same batch. A connection endpoint
+named by figure ID must be an element figure showing that end of the relationship.
+All figures in one `add_figure` call are added in a single undoable command.
 
-**Input schema**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "source_id": {"type": "string"},
-    "target_id": {"type": "string"},
-    "type":      {"type": "string", "description": "e.g. AssignmentRelationship"},
-    "name":      {"type": "string"}
-  },
-  "required": ["source_id", "target_id", "type"]
-}
-```
+**Styling** (`manage_appearance set_style`): `{view_id?, figure_id?|element_id?|connection_id?|relationship_id?, <style>, x?, y?, width?, height?}`; bounds only for figures.
 
-**Implementation**:
-1. Find source and target elements by ID using `ModelAccessor.findElementById()`.
-2. Throw with a clear message if either is not found.
-3. Resolve the relationship `EClass` from `IArchimatePackage`.
-4. Inside `UiThreadUtil.syncExec`:
-   - Create the relationship
-   - Set source, target, name
-   - Add to default folder
-   - Save model
-5. Return `{"id":..., "source_id":..., "target_id":..., "type":..., "success":true}`.
+**Style vocabulary** (`FigureStyle`; absent = unchanged, `null`/`""` = reset to the default
+Archi gives a new object of that type; a field that doesn't apply to the target is an item
+error and nothing is changed): `fill_color`, `line_color`, `font_color`, `icon_color`,
+`font` (Archi font string), `opacity`, `line_opacity`, `line_width`, `line_style`,
+`text_alignment`, `text_position`, `gradient`, `derive_line_color`, `icon_visible`,
+`figure_type`, `border_type`, `image_source`, `image_path` (must already be used in the
+model; importing images is not supported), `image_position`, `hide_junction_arrows`,
+`name_visible` (connections), `label_expression`. Values are Archi's native ones.
 
----
+**Renamed in v3.0.0** (clean break; the old names return an error naming the replacement):
+`set_figure` → `set_style`, `add_element` → `add_figure`, `add_relationship` →
+`add_connection`, `delete_connection` → `remove_connection`.
 
-### CreateViewTool — `create_view`
-
-**Description**: Create a new empty ArchiMate diagram view.
-
-**Input schema**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "name":          {"type": "string"},
-    "documentation": {"type": "string"}
-  },
-  "required": ["name"]
-}
-```
-
-**Implementation**:
-Inside `UiThreadUtil.syncExec`:
-- `IArchimateFactory.eINSTANCE.createArchimateDiagramModel()`
-- Set name and documentation
-- Add to `model.getDefaultFolderForObject(view).getElements()`
-- Save model
-
-Return `{"id":..., "name":..., "success":true}`.
-
----
-
-### AddElementToViewTool — `add_element_to_view`
-
-**Description**: Place an existing model element onto a view as a visual figure with
-layout position and size.
-
-**Input schema**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "view_id":    {"type": "string"},
-    "element_id": {"type": "string"},
-    "x":      {"type": "integer", "default": 50},
-    "y":      {"type": "integer", "default": 50},
-    "width":  {"type": "integer", "default": 120},
-    "height": {"type": "integer", "default": 55}
-  },
-  "required": ["view_id", "element_id"]
-}
-```
-
-**Implementation**:
-1. Find the view using `ModelAccessor.findViewById()` (recursive folder walk).
-2. Find the element using `ModelAccessor.findElementById()`.
-3. Throw with clear messages if either is not found.
-4. Inside `UiThreadUtil.syncExec`:
-   - Create `IDiagramModelArchimateObject` via factory
-   - Set `archimateElement`
-   - Create `IBounds`, set x/y/width/height
-   - Set bounds on figure
-   - Add figure to `view.getChildren()`
-   - Save model
-5. Return `{"view_id":..., "element_id":..., "figure_id":..., "x":..., "y":..., "width":..., "height":..., "success":true}`.
-
----
-
-### AddRelationshipToViewTool — `add_relationship_to_view`
-
-**Description**: Draw a visual connection on a view for an existing logical relationship.
-Both the source and target elements must already be present as figures on the view before
-calling this tool. The logical relationship must also already exist in the model (created
-via `create_relationship`).
-
-This is a separate step from `create_relationship` because Archi maintains a strict
-separation between the logical model (ArchiMate semantics) and the visual diagram
-(figure positions and connections). A relationship exists in the model whether or not it
-appears on any view.
-
-**Input schema**:
-```json
-{
-  "type": "object",
-  "properties": {
-    "view_id":         {"type": "string", "description": "ID of the target view"},
-    "relationship_id": {"type": "string", "description": "ID of the logical relationship to draw"},
-    "source_figure_id":{"type": "string", "description": "Optional: figure ID of the source element on the view. If omitted, the tool finds it automatically."},
-    "target_figure_id":{"type": "string", "description": "Optional: figure ID of the target element on the view. If omitted, the tool finds it automatically."}
-  },
-  "required": ["view_id", "relationship_id"]
-}
-```
-
-**Implementation**:
-
-1. Retrieve the open model via `ModelAccessor.getOpenModel()`. Return `-32000` if null.
-2. Look up the view using `ModelAccessor.findViewById(model, viewId)`.
-   Throw `"View not found: <id>"` if absent.
-3. Look up the relationship using `ModelAccessor.findRelationshipById(model, relationshipId)`.
-   Throw `"Relationship not found: <id>"` if absent.
-4. Resolve the source figure on the view:
-   - If `source_figure_id` is provided: look it up via `ModelAccessor.findFigureById(view, sourceFigureId)`.
-   - If not provided: find the figure automatically by scanning `view.getChildren()` for
-     an `IDiagramModelArchimateObject` whose `archimateElement` ID matches
-     `relationship.getSource().getId()`.
-   - Throw `"Source element '<name>' is not present as a figure on view '<name>'. Call add_element_to_view first."` if not found.
-5. Resolve the target figure the same way using `relationship.getTarget()`.
-   Throw `"Target element '<name>' is not present as a figure on view '<name>'. Call add_element_to_view first."` if not found.
-6. Check whether a connection for this relationship already exists on the view by scanning
-   `view.getChildren()` (and recursively nested children) for an
-   `IDiagramModelArchimateConnection` with the same `archimateRelationship`. If found,
-   return the existing connection's details with `"already_exists": true` rather than
-   creating a duplicate.
-7. Inside `UiThreadUtil.syncExec`:
-   ```java
-   IDiagramModelArchimateConnection connection =
-       IArchimateFactory.eINSTANCE.createDiagramModelArchimateConnection();
-   connection.setArchimateRelationship(relationship);
-   connection.connect(sourceFigure, targetFigure);
-   // connection.connect() adds the connection to both figures' source/target
-   // connection lists AND to the view — do not call view.getChildren().add() separately
-   IEditorModelManager.INSTANCE.saveModel(model);
-   ```
-   **Critical**: Use `connection.connect(source, target)` — do NOT manually call
-   `view.getChildren().add(connection)`. The `connect()` method handles all the internal
-   wiring between source figure, target figure, and view containment. Doing it manually
-   will corrupt the diagram.
-8. Return:
-   ```json
-   {
-     "connection_id":   "<generated id>",
-     "view_id":         "<view id>",
-     "relationship_id": "<relationship id>",
-     "source_figure_id":"<figure id>",
-     "target_figure_id":"<figure id>",
-     "already_exists":  false,
-     "success":         true
-   }
-   ```
+**`inspect_view definition`** returns `{view, elements, relationships, figures, connections}`
+using exactly the field names of the create / `add_figure` / `add_connection` inputs,
+figures parent-before-child, styles as non-default vocabulary fields. Replaying it in that
+order (into any open model) reproduces the view; a second `definition` is identical.
+Optional `model` (name or ID; read-only, selection unchanged) and `output_file` (written
+to the exchange folder, never overwriting). Note connectors and diagram references are
+reported under `warnings`, not exported.
 
 ---
 
@@ -1282,6 +1150,10 @@ In Copilot Studio: **Agent → Tools → Add a Tool → New Tool → Model Conte
 Or build a Power Platform custom connector using the OpenAPI descriptor at
 `GET http://localhost:7432/openapi.yaml`.
 
+If Copilot Studio reaches Archi through a tunnel or reverse proxy that forwards its own
+host name, add that host name with `-Darchi.mcp.allowed.hosts=<host>`; otherwise the
+Host/Origin guard returns 403.
+
 ---
 
 ## Critical Implementation Rules
@@ -1308,8 +1180,11 @@ Or build a Power Platform custom connector using the OpenAPI descriptor at
    Annotate `McpResponse` with `@JsonInclude(NON_NULL)` to omit null `error`/`result`
    fields.
 
-7. **CORS headers**: Include `Access-Control-Allow-Origin: *` on all responses and handle
-   `OPTIONS` preflight on `/mcp`. Copilot Studio requires this.
+7. **Local Host/Origin only**: `/sse`, `/message` and `/mcp` reject (403) a `Host` header
+   that isn't `localhost`, `127.0.0.1` or `[::1]` (any port), and an `Origin` header, when
+   present, that isn't one of those (`LocalOriginGuard`). This blocks DNS-rebinding and
+   cross-site requests from browser pages. Extra host names (e.g. a tunnel) can be allowed
+   with `-Darchi.mcp.allowed.hosts=host1,host2`. No permissive CORS headers.
 
 8. **Model null check**: Every tool must check `ModelAccessor.getOpenModel()` returns
    non-null before proceeding, and return a `-32000` error with the message

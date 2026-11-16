@@ -87,7 +87,7 @@ Per the canonical pattern, System Software and Device **can be nested inside the
 
 1. Create the `Node`, both `SystemSoftware` elements, and the `Device` with `manage_elements create`.
 2. Create the Aggregation relationships from Node to each of them with `manage_relationships create`.
-3. Add the Node's figure to the view first with `manage_view_content add_element`, noting its returned figure ID.
+3. Add the Node's figure to the view first with `manage_view_content add_figure`, noting its returned figure ID.
 4. Add the Platform sw, Operating System, and Device figures with `parent_figure_id` set to the Node's figure ID.
 5. Artifact, Technology Service, Application Component, and Communication Network are **not** nested — they sit outside the Node as independent figures, connected by lines.
 
@@ -150,12 +150,12 @@ Execute in this order. Do not reorder steps.
 9. manage_relationships create → Aggregation: Node -> PlatformSw, Node -> OperatingSystem, Node -> Device
 10. manage_relationships create → Association: Device -> CommunicationNetwork
 11. manage_views         create → the view
-12. manage_view_content  add_element → ApplicationComponent, TechnologyService, Artifact figures
-13. manage_view_content  add_element → Node figure
-14. manage_view_content  add_element → PlatformSw, OperatingSystem, Device figures, each with parent_figure_id = Node figure ID
-15. manage_view_content  add_element → CommunicationNetwork figure
-16. manage_view_content  add_relationship → all connections (skip the derived serving line — see Section 3)
-17. manage_appearance    set_figure → apply fill/border colours per Section 6
+12. manage_view_content  add_figure → ApplicationComponent, TechnologyService, Artifact figures
+13. manage_view_content  add_figure → Node figure
+14. manage_view_content  add_figure → PlatformSw, OperatingSystem, Device figures, each with parent_figure_id = Node figure ID
+15. manage_view_content  add_figure → CommunicationNetwork figure
+16. manage_view_content  add_connection → all connections (skip the derived serving line — see Section 3)
+17. manage_appearance    set_style → apply fill/border colours per Section 6
 ```
 
 Do NOT call `layout_view` on an Infrastructure View — auto-layout will pull the nested System Software/Device figures out of the Node's boundary.

@@ -28,13 +28,13 @@ public class ManageRelationshipsTool extends ConsolidatedTool {
         return "Create, update, or delete ArchiMate relationships, or query relationship "
                 + "options. Set 'operation' and pass 'items' as a single object or an array "
                 + "(batch). Returns a result entry per item. Fields by operation — "
-                + "create: {source_id, target_id, type, name?, folder_id?|folder_path?, access_type?} "
+                + "create: {source_id, target_id, type, id? (caller-supplied; on_conflict?: error|skip), name?, documentation?, folder_id?|folder_path?, access_type?, properties?, specialization?} "
                 + "(results include folder_path); "
-                + "update: {relationship_id, new_type?, name?, documentation?, access_type?, properties?, new_folder_id?}; "
+                + "update: {relationship_id, new_type?, name?, documentation?, access_type?, properties?, remove_properties?, specialization?, new_folder_id?}; "
                 + "delete: a relationship_id string, or {relationship_id, dry_run?}; "
                 + "valid_types: {source_id, target_id} — returns which relationship types the "
                 + "ArchiMate spec allows between them, without creating anything; "
-                + "between: {element_a_id, element_b_id, direction?} — returns existing "
+                + "between: {element_a_id, element_b_id, direction?, include_properties?} — returns existing "
                 + "relationships already connecting that pair (direction: \"either\" default or "
                 + "\"source_to_target\").";
     }

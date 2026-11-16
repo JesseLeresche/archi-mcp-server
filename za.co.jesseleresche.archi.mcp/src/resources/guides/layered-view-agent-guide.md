@@ -123,8 +123,8 @@ Each layer is represented on the view as a **Grouping rectangle** (ArchiMate `Gr
 ### How to create groups
 
 1. Create a `Grouping` element in the model for each layer using `manage_elements create`.
-2. Add each group to the view using `manage_view_content add_element`.
-3. Add domain elements to the view using `manage_view_content add_element` with `parent_figure_id` set to the group's figure ID so they are nested inside it.
+2. Add each group to the view using `manage_view_content add_figure`.
+3. Add domain elements to the view using `manage_view_content add_figure` with `parent_figure_id` set to the group's figure ID so they are nested inside it.
 
 ### Group sizing and arrangement
 - Groups are stacked **top to bottom** in the order defined in Section 2 with no gaps between them.
@@ -183,11 +183,11 @@ Execute in this order. Do not reorder steps.
 2. manage_elements      create   → all domain elements (batch array)
 3. manage_relationships create   → all relationships (batch array, order per Section 4)
 4. manage_views         create   → the view
-5. manage_view_content  add_element → all 7 layer groups (Grouping figures)
-6. manage_view_content  add_element → all domain element figures, each with parent_figure_id = their layer group's figure ID
-7. manage_view_content  add_relationship → all connections
-8. manage_appearance    set_figure → layer groups: dotted border #999999, transparent fill (per Section 7)
-9. manage_appearance    set_figure → domain elements: fill/border colours per layer (per Section 7)
+5. manage_view_content  add_figure → all 7 layer groups (Grouping figures)
+6. manage_view_content  add_figure → all domain element figures, each with parent_figure_id = their layer group's figure ID
+7. manage_view_content  add_connection → all connections
+8. manage_appearance    set_style → layer groups: dotted border #999999, transparent fill (per Section 7)
+9. manage_appearance    set_style → domain elements: fill/border colours per layer (per Section 7)
 ```
 
 Do NOT call `layout_view` on a Layered View — auto-layout will destroy the layer group structure. Element positions must respect the group nesting defined in Section 5.
