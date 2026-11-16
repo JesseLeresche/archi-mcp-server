@@ -14,83 +14,87 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class McpResponse {
 
     private final String jsonrpc = "2.0";
-
     private final Object id;
-
     private final JsonNode result;
-
     private final McpError error;
 
     private McpResponse(Object id, JsonNode result, McpError error) {
-        throw new UnsupportedOperationException("stub");
+        this.id = id;
+        this.result = result;
+        this.error = error;
     }
 
     /**
      * Create a success response with the given result.
      */
     public static McpResponse success(Object id, JsonNode result) {
-        throw new UnsupportedOperationException("stub");
+        return new McpResponse(id, result, null);
     }
 
     /**
      * Create an error response with the given code and message.
      */
     public static McpResponse error(Object id, int code, String message) {
-        throw new UnsupportedOperationException("stub");
+        return new McpResponse(id, null, new McpError(code, message));
     }
 
     /**
      * JSON-RPC parse error (-32700).
      */
     public static McpResponse parseError() {
-        throw new UnsupportedOperationException("stub");
+        return error(null, -32700, "Parse error");
     }
 
     /**
      * JSON-RPC method not found (-32601).
      */
     public static McpResponse methodNotFound(Object id) {
-        throw new UnsupportedOperationException("stub");
+        return error(id, -32601, "Method not found");
     }
 
     /**
      * JSON-RPC invalid params (-32602).
      */
     public static McpResponse invalidParams(Object id, String message) {
-        throw new UnsupportedOperationException("stub");
+        return error(id, -32602, message);
     }
 
     /**
      * Application-level error (-32000).
      */
     public static McpResponse appError(Object id, String message) {
-        throw new UnsupportedOperationException("stub");
+        return error(id, -32000, message);
     }
 
     @JsonProperty("jsonrpc")
     public String getJsonrpc() {
-        throw new UnsupportedOperationException("stub");
+        return jsonrpc;
     }
 
     @JsonProperty("id")
     public Object getId() {
-        throw new UnsupportedOperationException("stub");
+        return id;
     }
 
     @JsonProperty("result")
     public JsonNode getResult() {
-        throw new UnsupportedOperationException("stub");
+        return result;
     }
 
     @JsonProperty("error")
     public McpError getError() {
-        throw new UnsupportedOperationException("stub");
+        return error;
     }
 
     /**
      * Serialize this response to a JSON string.
      */
     public String toJson() {
-        throw new UnsupportedOperationException("stub");
+        try {
+            return ObjectMapperHolder.get().writeValueAsString(this);
+        } catch (Exception e) {
+            // Fallback — should never happen with a well-formed response
+            return "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}";
+        }
     }
 }
