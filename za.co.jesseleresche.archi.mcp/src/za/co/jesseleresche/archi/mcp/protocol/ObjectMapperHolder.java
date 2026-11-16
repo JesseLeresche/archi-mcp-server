@@ -11,17 +11,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public final class ObjectMapperHolder {
 
-    static final ObjectMapper MAPPER = new ObjectMapper()
-            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    static final ObjectMapper MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     private ObjectMapperHolder() {
-        // utility class
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
      * Returns the shared ObjectMapper instance.
      */
     public static ObjectMapper get() {
-        return MAPPER;
+        throw new UnsupportedOperationException("stub");
     }
 }

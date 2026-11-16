@@ -15,20 +15,16 @@ public class McpRequest {
     private static final ObjectMapper MAPPER = ObjectMapperHolder.MAPPER;
 
     private final String jsonrpc;
+
     private final Object id;
+
     private final String method;
+
     private final JsonNode params;
 
     @JsonCreator
-    public McpRequest(
-            @JsonProperty("jsonrpc") String jsonrpc,
-            @JsonProperty("id") Object id,
-            @JsonProperty("method") String method,
-            @JsonProperty("params") JsonNode params) {
-        this.jsonrpc = jsonrpc;
-        this.id = id;
-        this.method = method;
-        this.params = params;
+    public McpRequest(@JsonProperty("jsonrpc") String jsonrpc, @JsonProperty("id") Object id, @JsonProperty("method") String method, @JsonProperty("params") JsonNode params) {
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -36,26 +32,22 @@ public class McpRequest {
      * Returns null if parsing fails.
      */
     public static McpRequest parse(String json) {
-        try {
-            return MAPPER.readValue(json, McpRequest.class);
-        } catch (Exception e) {
-            return null;
-        }
+        throw new UnsupportedOperationException("stub");
     }
 
     public String getJsonrpc() {
-        return jsonrpc;
+        throw new UnsupportedOperationException("stub");
     }
 
     public Object getId() {
-        return id;
+        throw new UnsupportedOperationException("stub");
     }
 
     public String getMethod() {
-        return method;
+        throw new UnsupportedOperationException("stub");
     }
 
     public JsonNode getParams() {
-        return params;
+        throw new UnsupportedOperationException("stub");
     }
 }

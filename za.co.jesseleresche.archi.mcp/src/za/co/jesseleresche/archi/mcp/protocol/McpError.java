@@ -9,21 +9,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class McpError {
 
     private final int code;
+
     private final String message;
 
     @JsonCreator
-    public McpError(
-            @JsonProperty("code") int code,
-            @JsonProperty("message") String message) {
-        this.code = code;
-        this.message = message;
+    public McpError(@JsonProperty("code") int code, @JsonProperty("message") String message) {
+        throw new UnsupportedOperationException("stub");
     }
 
     public int getCode() {
-        return code;
+        throw new UnsupportedOperationException("stub");
     }
 
     public String getMessage() {
-        return message;
+        throw new UnsupportedOperationException("stub");
     }
 }

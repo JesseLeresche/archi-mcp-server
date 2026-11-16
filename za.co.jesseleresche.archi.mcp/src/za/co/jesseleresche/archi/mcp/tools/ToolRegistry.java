@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import za.co.jesseleresche.archi.mcp.protocol.ObjectMapperHolder;
@@ -20,46 +19,18 @@ public class ToolRegistry {
     private final Map<String, ITool> tools = new LinkedHashMap<>();
 
     public ToolRegistry() {
-        // Model session & querying
-        register(new ManageModelsTool());
-        register(new QueryModelTool());
-        register(new GetViewsTool());
-
-        // Consolidated CRUD / content tools (operation + items convention)
-        register(new ManageElementsTool());
-        register(new ManageRelationshipsTool());
-        register(new ManageViewsTool());
-        register(new ManageViewContentTool());
-        register(new ManageFoldersTool());
-        register(new ManageAppearanceTool());
-
-        // Read-only inspection & analysis
-        register(new InspectViewTool());
-        register(new GetElementAnalysisTool());
-        register(new ValidateModelTool());
-
-        // Specialised / standalone
-        register(new ExportViewAsImageTool());
-        register(new CreateSdOverviewViewTool());
+        throw new UnsupportedOperationException("stub");
     }
 
     private void register(ITool tool) {
-        tools.put(tool.getName(), tool);
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
      * Returns MCP tool descriptors with name, description, and inputSchema for each tool.
      */
     public List<ObjectNode> getDescriptors() {
-        List<ObjectNode> descriptors = new ArrayList<>();
-        for (ITool tool : tools.values()) {
-            ObjectNode descriptor = MAPPER.createObjectNode();
-            descriptor.put("name", tool.getName());
-            descriptor.put("description", tool.getDescription());
-            descriptor.set("inputSchema", tool.getInputSchema());
-            descriptors.add(descriptor);
-        }
-        return descriptors;
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -67,6 +38,6 @@ public class ToolRegistry {
      * @return the tool, or null if not found
      */
     public ITool get(String name) {
-        return tools.get(name);
+        throw new UnsupportedOperationException("stub");
     }
 }

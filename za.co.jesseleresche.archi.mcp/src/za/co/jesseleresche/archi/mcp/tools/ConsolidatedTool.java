@@ -2,7 +2,6 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -23,12 +22,11 @@ abstract class ConsolidatedTool implements ITool {
 
     protected static final ObjectMapper MAPPER = ToolRegistry.MAPPER;
 
-    /** Read the required {@code operation} discriminator. */
+    /**
+     * Read the required {@code operation} discriminator.
+     */
     protected String requireOperation(JsonNode args) throws Exception {
-        if (args == null || !args.hasNonNull("operation")) {
-            throw new Exception("'operation' is required");
-        }
-        return args.get("operation").asText();
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -36,37 +34,7 @@ abstract class ConsolidatedTool implements ITool {
      * (treated as a one-element batch) or a non-empty array.
      */
     protected List<JsonNode> normalizeItems(JsonNode args) throws Exception {
-        JsonNode items = args == null ? null : args.get("items");
-        if (items == null || items.isNull()) {
-            throw new Exception("'items' is required (a single object or an array)");
-        }
-        // Some MCP clients encode the structured 'items' payload as a JSON string
-        // (a TextNode) rather than a JSON object/array. Unwrap it so per-item field
-        // lookups work for both encodings.
-        if (items.isTextual()) {
-            String raw = items.asText().trim();
-            if (raw.isEmpty()) {
-                throw new Exception("'items' is required (a single object or an array)");
-            }
-            try {
-                items = MAPPER.readTree(raw);
-            } catch (Exception e) {
-                throw new Exception("'items' is a string but not valid JSON: " + e.getMessage());
-            }
-            if (items == null || items.isNull()) {
-                throw new Exception("'items' is required (a single object or an array)");
-            }
-        }
-        List<JsonNode> list = new ArrayList<>();
-        if (items.isArray()) {
-            if (items.isEmpty()) {
-                throw new Exception("'items' must not be an empty array");
-            }
-            items.forEach(list::add);
-        } else {
-            list.add(items);
-        }
-        return list;
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -74,10 +42,7 @@ abstract class ConsolidatedTool implements ITool {
      * (e.g. {@code {"elements": [...]}}). The bulk tool returns {@code {results:[...]}}.
      */
     protected String delegateBulk(ITool bulkTool, String wrapperKey, List<JsonNode> items) throws Exception {
-        ObjectNode wrapper = MAPPER.createObjectNode();
-        ArrayNode arr = wrapper.putArray(wrapperKey);
-        items.forEach(arr::add);
-        return bulkTool.execute(wrapper);
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -85,17 +50,7 @@ abstract class ConsolidatedTool implements ITool {
      * per-item error) into a uniform {@code {results:[...]}} response.
      */
     protected String delegatePerItem(ITool singleTool, List<JsonNode> items) throws Exception {
-        ArrayNode results = MAPPER.createArrayNode();
-        for (JsonNode item : items) {
-            try {
-                results.add(MAPPER.readTree(singleTool.execute(item)));
-            } catch (Exception e) {
-                results.add(MAPPER.createObjectNode().put("error", e.getMessage()));
-            }
-        }
-        ObjectNode response = MAPPER.createObjectNode();
-        response.set("results", results);
-        return MAPPER.writeValueAsString(response);
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -104,26 +59,21 @@ abstract class ConsolidatedTool implements ITool {
      * absent or null. Shared by the bulk delegate tools.
      */
     static String requireText(JsonNode item, String field) throws Exception {
-        JsonNode n = item == null ? null : item.get(field);
-        if (n == null || n.isNull()) {
-            throw new Exception("missing required field '" + field + "'");
-        }
-        return n.asText();
+        throw new UnsupportedOperationException("stub");
     }
 
-    /** Coerce a bare string item into {@code {key: value}}; pass objects through unchanged. */
+    /**
+     * Coerce a bare string item into {@code {key: value}}; pass objects through unchanged.
+     */
     protected JsonNode asObject(JsonNode item, String stringKey) {
-        if (item.isTextual()) {
-            return MAPPER.createObjectNode().put(stringKey, item.asText());
-        }
-        return item;
+        throw new UnsupportedOperationException("stub");
     }
 
-    /** Return a copy of the item object with an extra string field set. */
+    /**
+     * Return a copy of the item object with an extra string field set.
+     */
     protected JsonNode withField(JsonNode item, String key, String value) {
-        ObjectNode out = item.isObject() ? ((ObjectNode) item).deepCopy() : MAPPER.createObjectNode();
-        out.put(key, value);
-        return out;
+        throw new UnsupportedOperationException("stub");
     }
 
     /**
@@ -132,48 +82,31 @@ abstract class ConsolidatedTool implements ITool {
      * individual items to override it.
      */
     protected JsonNode withDefaultField(JsonNode item, String key, String value) {
-        if (item.isObject() && item.hasNonNull(key)) {
-            return item;
-        }
-        return withField(item, key, value);
+        throw new UnsupportedOperationException("stub");
     }
 
-    /** Build the standard {@code operation} + {@code items} schema for write tools. */
+    /**
+     * Build the standard {@code operation} + {@code items} schema for write tools.
+     */
     protected ObjectNode operationItemsSchema(String[] operations, String itemsDescription) {
-        ObjectNode schema = MAPPER.createObjectNode();
-        schema.put("type", "object");
-        ObjectNode props = schema.putObject("properties");
-        addOperation(props, operations);
-        addItems(props, itemsDescription);
-        ArrayNode required = schema.putArray("required");
-        required.add("operation");
-        required.add("items");
-        return schema;
+        throw new UnsupportedOperationException("stub");
     }
 
-    /** Add an {@code operation} string property constrained to the given enum values. */
+    /**
+     * Add an {@code operation} string property constrained to the given enum values.
+     */
     protected void addOperation(ObjectNode props, String[] operations) {
-        ObjectNode op = props.putObject("operation");
-        op.put("type", "string");
-        op.put("description", "The action to perform.");
-        ArrayNode en = op.putArray("enum");
-        for (String o : operations) {
-            en.add(o);
-        }
+        throw new UnsupportedOperationException("stub");
     }
 
-    /** Add an {@code items} property that accepts a single object or an array of objects. */
+    /**
+     * Add an {@code items} property that accepts a single object or an array of objects.
+     */
     protected void addItems(ObjectNode props, String description) {
-        ObjectNode items = props.putObject("items");
-        items.put("description", description);
-        ArrayNode oneOf = items.putArray("oneOf");
-        oneOf.addObject().put("type", "object");
-        ObjectNode arr = oneOf.addObject();
-        arr.put("type", "array");
-        arr.putObject("items").put("type", "object");
+        throw new UnsupportedOperationException("stub");
     }
 
     protected void addStringProp(ObjectNode props, String name, String description) {
-        props.putObject(name).put("type", "string").put("description", description);
+        throw new UnsupportedOperationException("stub");
     }
 }

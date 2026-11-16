@@ -2,11 +2,9 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import com.archimatetool.model.IArchimateModel;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 
@@ -17,44 +15,21 @@ public class SelectModelTool implements ITool {
 
     @Override
     public String getName() {
-        return "select_model";
+        throw new UnsupportedOperationException("stub");
     }
 
     @Override
     public String getDescription() {
-        return "Select which open model to use by name or ID. All subsequent tool calls will operate on the selected model.";
+        throw new UnsupportedOperationException("stub");
     }
 
     @Override
     public ObjectNode getInputSchema() {
-        ObjectNode schema = ToolRegistry.MAPPER.createObjectNode();
-        schema.put("type", "object");
-
-        ObjectNode properties = schema.putObject("properties");
-
-        ObjectNode nameOrId = properties.putObject("name_or_id");
-        nameOrId.put("type", "string");
-        nameOrId.put("description", "The name or ID of the model to select (name matching is case-insensitive)");
-
-        ArrayNode required = schema.putArray("required");
-        required.add("name_or_id");
-
-        return schema;
+        throw new UnsupportedOperationException("stub");
     }
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        String nameOrId = args.get("name_or_id").asText();
-
-        IArchimateModel model = ModelAccessor.selectModel(nameOrId);
-        if (model == null) {
-            throw new Exception("No open model found matching: " + nameOrId);
-        }
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", model.getId());
-        result.put("name", model.getName());
-
-        return ToolRegistry.MAPPER.writeValueAsString(result);
+        throw new UnsupportedOperationException("stub");
     }
 }
