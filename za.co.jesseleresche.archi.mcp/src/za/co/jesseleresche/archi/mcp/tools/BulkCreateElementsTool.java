@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateElement;
@@ -24,21 +26,142 @@ public class BulkCreateElementsTool implements ITool {
 
     @Override
     public String getName() {
-        throw new UnsupportedOperationException("stub");
+        return "bulk_create_elements";
     }
 
     @Override
     public String getDescription() {
-        throw new UnsupportedOperationException("stub");
+        return "Create multiple ArchiMate elements in a single call. "
+                + "Returns a result entry per element, with per-item success or error. "
+                + "Each item may optionally specify a folder_id and custom properties.";
     }
 
     @Override
     public ObjectNode getInputSchema() {
-        throw new UnsupportedOperationException("stub");
+        ObjectNode schema = ToolRegistry.MAPPER.createObjectNode();
+        schema.put("type", "object");
+
+        ObjectNode properties = schema.putObject("properties");
+
+        ObjectNode elements = properties.putObject("elements");
+        elements.put("type", "array");
+        elements.put("description", "List of elements to create");
+        ObjectNode items = elements.putObject("items");
+        items.put("type", "object");
+        ObjectNode itemProps = items.putObject("properties");
+        itemProps.putObject("name").put("type", "string");
+        itemProps.putObject("type").put("type", "string");
+        itemProps.putObject("documentation").put("type", "string");
+        itemProps.putObject("folder_id").put("type", "string")
+                .put("description", "Optional folder ID for this element");
+        itemProps.putObject("folder_path").put("type", "string")
+                .put("description",
+                        "Alternative to folder_id: a \"/\"-separated path starting with a "
+                                + "top-level folder name (e.g. \"Application/Service domains\"), "
+                                + "matched case-insensitively. Missing intermediate folders are "
+                                + "created. Ignored if folder_id is also set.");
+        ObjectNode propsSchema = itemProps.putObject("properties");
+        propsSchema.put("type", "array");
+        propsSchema.put("description", "Optional custom properties to set on creation, as {key, value} pairs "
+                + "(insertion order is preserved).");
+        ObjectNode propsItems = propsSchema.putObject("items");
+        propsItems.put("type", "object");
+        ObjectNode propsItemProps = propsItems.putObject("properties");
+        propsItemProps.putObject("key").put("type", "string");
+        propsItemProps.putObject("value").put("type", "string");
+        ArrayNode itemRequired = items.putArray("required");
+        itemRequired.add("name");
+        itemRequired.add("type");
+
+        ArrayNode required = schema.putArray("required");
+        required.add("elements");
+
+        return schema;
     }
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        throw new UnsupportedOperationException("stub");
+        IArchimateModel model = ModelAccessor.getOpenModel();
+        if (model == null) {
+            throw new Exception("No model is currently open in Archi");
+        }
+
+        JsonNode elementsNode = args.get("elements");
+        if (!elementsNode.isArray() || elementsNode.isEmpty()) {
+            throw new Exception("'elements' must be a non-empty array");
+        }
+
+        List<Map<String, Object>> results = UiThreadUtil.syncExec(() -> {
+            List<Map<String, Object>> entries = new ArrayList<>();
+
+            for (JsonNode item : elementsNode) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                try {
+                    String name = ConsolidatedTool.requireText(item, "name");
+                    String typeName = ConsolidatedTool.requireText(item, "type");
+                    String documentation = item.has("documentation") ? item.get("documentation").asText() : null;
+                    String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
+                    String folderPath = item.has("folder_path") ? item.get("folder_path").asText() : null;
+
+                    EClass eClass = ModelAccessor.resolveElementClass(typeName);
+                    if (eClass == null) {
+                        entry.put("error", "Unknown ArchiMate element type: " + typeName);
+                        entries.add(entry);
+                        continue;
+                    }
+
+                    EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
+                    IArchimateElement element = (IArchimateElement) eObject;
+                    element.setName(name);
+                    if (documentation != null) {
+                        element.setDocumentation(documentation);
+                    }
+                    if (item.has("properties") && item.get("properties").isArray()) {
+                        for (JsonNode prop : item.get("properties")) {
+                            IProperty p = IArchimateFactory.eINSTANCE.createProperty();
+                            p.setKey(prop.get("key").asText());
+                            p.setValue(prop.get("value").asText());
+                            element.getProperties().add(p);
+                        }
+                    }
+
+                    IFolder folder;
+                    if (folderId != null) {
+                        folder = ModelAccessor.findFolderById(model, folderId);
+                        if (folder == null) {
+                            entry.put("error", "Folder not found: " + folderId);
+                            entries.add(entry);
+                            continue;
+                        }
+                        ModelAccessor.requireSection(model, folder, element);
+                    } else if (folderPath != null) {
+                        folder = ModelAccessor.findOrCreateFolderByPath(model, folderPath, element);
+                        if (folder == null) {
+                            entry.put("error", "folder_path's top-level segment doesn't match "
+                                    + "any root folder: " + folderPath);
+                            entries.add(entry);
+                            continue;
+                        }
+                    } else {
+                        folder = model.getDefaultFolderForObject(element);
+                    }
+                    folder.getElements().add(element);
+
+                    entry.put("id", element.getId());
+                    entry.put("folder_id", folder.getId());
+                    entry.put("folder_path", ModelAccessor.getFolderPath(folder));
+                } catch (Exception e) {
+                    entry.put("error", e.getMessage());
+                }
+                entries.add(entry);
+            }
+
+            ModelAccessor.saveModel(model);
+            return entries;
+        });
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("results", results);
+        return ToolRegistry.MAPPER.writeValueAsString(response);
     }
 }
