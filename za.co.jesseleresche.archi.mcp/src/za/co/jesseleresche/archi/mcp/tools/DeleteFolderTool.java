@@ -3,7 +3,6 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -75,7 +74,7 @@ public class DeleteFolderTool implements ITool {
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             parent.getFolders().remove(folder);
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("folder_id", folderId);

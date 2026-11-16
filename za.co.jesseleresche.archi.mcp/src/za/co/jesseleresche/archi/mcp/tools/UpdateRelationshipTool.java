@@ -8,7 +8,6 @@ import java.util.Map;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateConcept;
 import com.archimatetool.model.IArchimateFactory;
@@ -99,7 +98,7 @@ public class UpdateRelationshipTool implements ITool {
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             Map<String, Object> entry = applyUpdate(model, args);
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entry;
         });
 

@@ -1,6 +1,7 @@
 package za.co.jesseleresche.archi.mcp.util;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.swt.widgets.Display;
@@ -13,6 +14,15 @@ import org.eclipse.swt.widgets.Display;
  */
 public class UiThreadUtil {
 
+    /** Runs a task synchronously on the UI thread. Tests swap in {@code Runnable::run}. */
+    private static final Executor DISPLAY = r -> Display.getDefault().syncExec(r);
+    private static volatile Executor executor = DISPLAY;
+
+    /** Replace the UI-thread executor; {@code null} restores the Display path. */
+    public static void setExecutor(Executor e) {
+        executor = e == null ? DISPLAY : e;
+    }
+
     /**
      * Run a callable on the Eclipse UI thread and return its result.
      * Throws RuntimeException if the callable throws.
@@ -21,7 +31,7 @@ public class UiThreadUtil {
         AtomicReference<T> result = new AtomicReference<>();
         AtomicReference<Exception> error = new AtomicReference<>();
 
-        Display.getDefault().syncExec(() -> {
+        executor.execute(() -> {
             try {
                 result.set(callable.call());
             } catch (Exception e) {

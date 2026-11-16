@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IBounds;
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -194,7 +193,7 @@ public class BulkUpdateFigureAppearanceTool implements ITool {
                 entries.add(entry);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entries;
         });
 

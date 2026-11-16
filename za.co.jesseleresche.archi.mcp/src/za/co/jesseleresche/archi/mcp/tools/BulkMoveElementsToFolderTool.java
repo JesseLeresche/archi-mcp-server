@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateElement;
@@ -134,7 +133,7 @@ public class BulkMoveElementsToFolderTool implements ITool {
                 entries.add(entry);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entries;
         });
 

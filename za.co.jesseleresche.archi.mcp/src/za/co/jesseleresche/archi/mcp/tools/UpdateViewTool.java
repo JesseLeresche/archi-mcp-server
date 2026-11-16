@@ -3,7 +3,6 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -77,7 +76,7 @@ public class UpdateViewTool implements ITool {
                 view.setDocumentation(newDoc);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("view_id", view.getId());

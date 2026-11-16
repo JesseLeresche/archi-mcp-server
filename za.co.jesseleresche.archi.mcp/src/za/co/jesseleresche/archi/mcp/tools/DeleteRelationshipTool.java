@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.eclipse.emf.ecore.EObject;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IArchimateConcept;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
@@ -73,7 +72,7 @@ public class DeleteRelationshipTool implements ITool {
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
             Map<String, Object> entry = applyDelete(model, relId, dryRun);
             if (!dryRun) {
-                IEditorModelManager.INSTANCE.saveModel(model);
+                ModelAccessor.saveModel(model);
             }
             return entry;
         });

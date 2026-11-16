@@ -9,7 +9,6 @@ import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -136,7 +135,7 @@ public class RemoveFigureFromViewTool implements ITool {
                 cmd.execute();
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
 
             return new LinkedHashMap<String, Object>();
         });

@@ -3,7 +3,6 @@ package za.co.jesseleresche.archi.mcp.tools;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -165,7 +164,7 @@ public class UpdateConnectionTool implements ITool {
                 conn.setTextPosition(textPosition);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("connection_id", conn.getId());

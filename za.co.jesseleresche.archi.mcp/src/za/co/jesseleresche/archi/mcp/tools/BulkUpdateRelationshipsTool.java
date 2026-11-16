@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.IArchimateModel;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -85,7 +84,7 @@ public class BulkUpdateRelationshipsTool implements ITool {
                 }
                 entries.add(entry);
             }
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entries;
         });
 

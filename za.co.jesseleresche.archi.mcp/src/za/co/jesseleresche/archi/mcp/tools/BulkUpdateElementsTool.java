@@ -8,7 +8,6 @@ import java.util.Map;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -166,7 +165,7 @@ public class BulkUpdateElementsTool implements ITool {
                 entries.add(entry);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entries;
         });
 

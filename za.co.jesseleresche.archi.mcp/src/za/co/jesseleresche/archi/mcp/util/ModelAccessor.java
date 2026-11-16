@@ -29,11 +29,46 @@ public class ModelAccessor {
 
     private static volatile String selectedModelId;
 
+    /** Where open models come from and how they are saved. Tests supply an in-memory one. */
+    public interface ModelSource {
+        List<IArchimateModel> getModels();
+
+        void save(IArchimateModel model) throws IOException;
+    }
+
+    /** Default source; a holder class so IEditorModelManager is only loaded when used. */
+    private static final class EditorSource implements ModelSource {
+        static final EditorSource INSTANCE = new EditorSource();
+
+        @Override
+        public List<IArchimateModel> getModels() {
+            return IEditorModelManager.INSTANCE.getModels();
+        }
+
+        @Override
+        public void save(IArchimateModel model) throws IOException {
+            IEditorModelManager.INSTANCE.saveModel(model);
+        }
+    }
+
+    private static volatile ModelSource source;
+
+    /** Replace the model source; {@code null} restores the Archi editor. Clears the selection. */
+    public static void setModelSource(ModelSource s) {
+        source = s;
+        selectedModelId = null;
+    }
+
+    private static ModelSource source() {
+        ModelSource s = source;
+        return s != null ? s : EditorSource.INSTANCE;
+    }
+
     /**
      * Returns all open models from the Archi editor.
      */
     public static List<IArchimateModel> getAllModels() {
-        return IEditorModelManager.INSTANCE.getModels();
+        return source().getModels();
     }
 
     /**
@@ -41,7 +76,7 @@ public class ModelAccessor {
      * Returns null if no models are open.
      */
     public static IArchimateModel getOpenModel() {
-        List<IArchimateModel> models = IEditorModelManager.INSTANCE.getModels();
+        List<IArchimateModel> models = source().getModels();
         if (models.isEmpty()) return null;
 
         if (selectedModelId != null) {
@@ -60,7 +95,7 @@ public class ModelAccessor {
      * Select a model by name or ID. Returns the matched model, or null if not found.
      */
     public static IArchimateModel selectModel(String nameOrId) {
-        List<IArchimateModel> models = IEditorModelManager.INSTANCE.getModels();
+        List<IArchimateModel> models = source().getModels();
         for (IArchimateModel model : models) {
             if (nameOrId.equals(model.getId()) || nameOrId.equalsIgnoreCase(model.getName())) {
                 selectedModelId = model.getId();
@@ -224,7 +259,7 @@ public class ModelAccessor {
      * Save the model via the Archi editor model manager.
      */
     public static void saveModel(IArchimateModel model) throws IOException {
-        IEditorModelManager.INSTANCE.saveModel(model);
+        source().save(model);
     }
 
     /**

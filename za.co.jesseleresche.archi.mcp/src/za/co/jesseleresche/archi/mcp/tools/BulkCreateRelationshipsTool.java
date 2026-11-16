@@ -10,7 +10,6 @@ import org.eclipse.emf.ecore.EObject;
 
 import java.util.stream.Collectors;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -182,7 +181,7 @@ public class BulkCreateRelationshipsTool implements ITool {
                 entries.add(entry);
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
             return entries;
         });
 

@@ -9,7 +9,6 @@ import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 import org.eclipse.gef.commands.CompoundCommand;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
@@ -201,7 +200,7 @@ public class BulkAddElementsToViewTool implements ITool {
                 for (int i = 0; i < figures.size(); i++) {
                     figureEntries.get(i).put("figure_id", figures.get(i).getId());
                 }
-                IEditorModelManager.INSTANCE.saveModel(model);
+                ModelAccessor.saveModel(model);
             }
 
             return entries;

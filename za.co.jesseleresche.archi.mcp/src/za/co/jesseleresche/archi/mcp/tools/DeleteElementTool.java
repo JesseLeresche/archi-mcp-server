@@ -9,7 +9,6 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 
-import com.archimatetool.editor.model.IEditorModelManager;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
@@ -210,7 +209,7 @@ public class DeleteElementTool implements ITool {
                 cmd.execute();
             }
 
-            IEditorModelManager.INSTANCE.saveModel(model);
+            ModelAccessor.saveModel(model);
 
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("relationships_deleted", counts[0]);
