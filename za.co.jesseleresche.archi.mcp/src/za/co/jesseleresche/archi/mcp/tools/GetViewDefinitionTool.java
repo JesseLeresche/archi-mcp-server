@@ -61,7 +61,7 @@ public class GetViewDefinitionTool implements ITool {
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        IArchimateModel model = resolveModel(args);
+        IArchimateModel model = ModelAccessor.resolveModel(args);
         String viewId = ConsolidatedTool.requireText(args, "view_id");
         IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
         if (view == null) {
@@ -171,22 +171,6 @@ public class GetViewDefinitionTool implements ITool {
         return def;
     }
 
-    /** The {@code model} arg's open model (name or ID), else the selected one. */
-    static IArchimateModel resolveModel(JsonNode args) throws Exception {
-        if (args.hasNonNull("model")) {
-            String m = args.get("model").asText();
-            IArchimateModel model = ModelAccessor.findModel(m);
-            if (model == null) {
-                throw new Exception("Model not found: " + m);
-            }
-            return model;
-        }
-        IArchimateModel model = ModelAccessor.getOpenModel();
-        if (model == null) {
-            throw new Exception("No model is currently open in Archi");
-        }
-        return model;
-    }
 
     /** A relationship in create's input form; shared with {@code manage_relationships query}. */
     static Map<String, Object> relationshipEntry(IArchimateRelationship r) {

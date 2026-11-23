@@ -143,6 +143,33 @@ class QueryRelationshipsToolTest {
     }
 
     @Test
+    void viewsInViewFolderOrder() throws Exception {
+        IArchimateRelationship r = models.relationship("ServingRelationship", app, models.element("ApplicationComponent", "B"));
+        for (int i = 0; i < 8; i++) {
+            models.view("V" + i);
+        }
+        // Move one view into a subfolder so folder order differs from creation order.
+        IArchimateDiagramModel first = ModelAccessor.collectAllFromFolders(models.model, IArchimateDiagramModel.class).get(0);
+        ModelAccessor.findOrCreateFolderByPath(models.model, "Views/Sub").getElements().add(first);
+        List<String> expected = new ArrayList<>();
+        for (IArchimateDiagramModel v : ModelAccessor.collectAllFromFolders(models.model, IArchimateDiagramModel.class)) {
+            expected.add(v.getId());
+        }
+        for (int i = expected.size() - 1; i >= 0; i--) {
+            draw(ModelAccessor.findViewById(models.model, expected.get(i)), r);
+        }
+        List<String> views = new ArrayList<>();
+        entry(query("{}"), r.getId()).get("views").forEach(n -> views.add(n.asText()));
+        assertEquals(expected, views);
+    }
+
+    @Test
+    void onViewMustBeBoolean() {
+        Exception e = assertThrows(Exception.class, () -> query("{'on_view':'yes'}"));
+        assertEquals("on_view must be true or false, got \"yes\"", e.getMessage());
+    }
+
+    @Test
     void onViewFalseReturnsExactlyUndrawn() throws Exception {
         IArchimateRelationship r1 = access(app, data, IAccessRelationship.READ_ACCESS);
         IArchimateRelationship r2 = access(app, data, IAccessRelationship.READ_ACCESS);

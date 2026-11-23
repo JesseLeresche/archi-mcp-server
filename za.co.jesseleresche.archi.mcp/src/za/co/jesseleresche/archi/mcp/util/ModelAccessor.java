@@ -91,6 +91,23 @@ public class ModelAccessor {
         return models.get(0);
     }
 
+    /** The {@code model} arg's open model (name or ID, selection unchanged), else the selected one. */
+    public static IArchimateModel resolveModel(com.fasterxml.jackson.databind.JsonNode args) throws Exception {
+        if (args.hasNonNull("model")) {
+            String m = args.get("model").asText();
+            IArchimateModel model = findModel(m);
+            if (model == null) {
+                throw new Exception("Model not found: " + m);
+            }
+            return model;
+        }
+        IArchimateModel model = getOpenModel();
+        if (model == null) {
+            throw new Exception("No model is currently open in Archi");
+        }
+        return model;
+    }
+
     /** An open model by ID or (case-insensitive) name, without changing the selection; null if none. */
     public static IArchimateModel findModel(String nameOrId) {
         for (IArchimateModel model : source().getModels()) {

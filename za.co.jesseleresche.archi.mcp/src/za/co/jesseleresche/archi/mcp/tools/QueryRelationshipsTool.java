@@ -1,6 +1,7 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -10,10 +11,12 @@ import java.util.Set;
 import org.eclipse.emf.ecore.EClass;
 
 import com.archimatetool.model.IArchimateConcept;
+import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
-import com.archimatetool.model.IDiagramModelComponent;
+import com.archimatetool.model.IDiagramModelConnection;
+import com.archimatetool.model.IDiagramModelObject;
 import com.archimatetool.model.util.ArchimateModelUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -55,7 +58,7 @@ public class QueryRelationshipsTool implements ITool {
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        IArchimateModel model = GetViewDefinitionTool.resolveModel(args);
+        IArchimateModel model = ModelAccessor.resolveModel(args);
         EClass type = null;
         if (args.hasNonNull("type_filter")) {
             String t = args.get("type_filter").asText();
@@ -68,7 +71,25 @@ public class QueryRelationshipsTool implements ITool {
         if (elementId != null && !(ArchimateModelUtils.getObjectByID(model, elementId) instanceof IArchimateConcept)) {
             throw new Exception("Element or relationship not found: " + elementId);
         }
-        Boolean onView = args.hasNonNull("on_view") ? args.get("on_view").asBoolean() : null;
+        Boolean onView = null;
+        if (args.hasNonNull("on_view")) {
+            if (!args.get("on_view").isBoolean()) {
+                throw new Exception("on_view must be true or false, got " + args.get("on_view"));
+            }
+            onView = args.get("on_view").asBoolean();
+        }
+
+        // Views per relationship, in view folder order (Archi's referencing-components set is unordered).
+        Map<IArchimateRelationship, Set<String>> drawnOn = new HashMap<>();
+        for (IArchimateDiagramModel v : ModelAccessor.collectAllFromFolders(model, IArchimateDiagramModel.class)) {
+            for (IDiagramModelObject o : ModelAccessor.collectAllDiagramObjects(v)) {
+                for (IDiagramModelConnection conn : o.getSourceConnections()) {
+                    if (conn instanceof IDiagramModelArchimateConnection c) {
+                        drawnOn.computeIfAbsent(c.getArchimateRelationship(), k -> new LinkedHashSet<>()).add(v.getId());
+                    }
+                }
+            }
+        }
 
         List<Map<String, Object>> entries = new ArrayList<>();
         for (IArchimateRelationship r : ModelAccessor.collectAllFromFolders(model, IArchimateRelationship.class)) {
@@ -79,13 +100,7 @@ public class QueryRelationshipsTool implements ITool {
                     && !elementId.equals(r.getTarget().getId())) {
                 continue;
             }
-            // ponytail: one scan of referencing components per relationship; fine at ~1.3k rels
-            Set<String> views = new LinkedHashSet<>();
-            for (IDiagramModelComponent dc : r.getReferencingDiagramComponents()) {
-                if (dc instanceof IDiagramModelArchimateConnection c) {
-                    views.add(c.getDiagramModel().getId());
-                }
-            }
+            Set<String> views = drawnOn.getOrDefault(r, Set.of());
             if (onView != null && onView == views.isEmpty()) {
                 continue;
             }
