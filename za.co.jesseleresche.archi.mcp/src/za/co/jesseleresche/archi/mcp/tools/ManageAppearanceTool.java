@@ -30,6 +30,8 @@ public class ManageAppearanceTool extends ConsolidatedTool {
                 + "set_style: items (single object or array) {view_id?, figure_id?|element_id?|connection_id?|"
                 + "relationship_id?, <style fields>, x?, y?, width?, height?} (bounds only for figures). "
                 + "A top-level view_id applies to every item that omits its own. "
+                + "element_id/relationship_id fails if the element or relationship is drawn more than once on the "
+                + "view; pass figure_id/connection_id. "
                 + "layout_view: {view_id, spacing?}. " + FigureStyle.VOCABULARY;
     }
 

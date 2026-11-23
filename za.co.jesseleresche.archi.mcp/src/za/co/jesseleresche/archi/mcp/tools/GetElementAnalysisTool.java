@@ -136,9 +136,7 @@ public class GetElementAnalysisTool implements ITool {
 
         List<Map<String, Object>> usedInViews = new ArrayList<>();
         for (IArchimateDiagramModel view : allViews) {
-            IDiagramModelArchimateObject figure =
-                    ModelAccessor.findFigureByElementId(view, elementId);
-            if (figure != null) {
+            for (IDiagramModelArchimateObject figure : ModelAccessor.findAllFiguresByElementId(view, elementId)) {
                 Map<String, Object> entry = new LinkedHashMap<>();
                 entry.put("view_id", view.getId());
                 entry.put("view_name", view.getName());

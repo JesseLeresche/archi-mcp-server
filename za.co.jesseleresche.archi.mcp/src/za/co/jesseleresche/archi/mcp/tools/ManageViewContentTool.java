@@ -42,10 +42,16 @@ public class ManageViewContentTool extends ConsolidatedTool {
                 + "parent_figure_id? (may name a figure added earlier in the same batch), figure_id? "
                 + "(caller-supplied ID; on_conflict?: error|skip), <style fields>}; "
                 + "remove_figure: {figure_id?|element_id?}; "
-                + "add_connection: {relationship_id, source_figure_id?, target_figure_id?, bendpoints?, <style fields>}; "
+                + "add_connection: {relationship_id, source_figure_id?, target_figure_id?, connection_id?, "
+                + "on_conflict?: error|skip, on_existing?: reuse|add, bendpoints?, <style fields>} — a relationship "
+                + "may be drawn more than once; an existing drawing between the same figures (an omitted figure ID "
+                + "matches any figure) fails unless on_existing is given (reuse returns it with reused: true, add "
+                + "draws another line); an omitted end whose element is shown more than once fails, pass "
+                + "source_figure_id/target_figure_id; "
                 + "update_connection: {connection_id?|relationship_id?, bendpoints?, <style fields>}; "
                 + "remove_connection: {connection_id?|relationship_id?} removes only the drawing — to delete "
                 + "the relationship from the model use manage_relationships delete. "
+                + "relationship_id/element_id fails if it matches more than one drawing; pass connection_id/figure_id. "
                 + FigureStyle.VOCABULARY;
     }
 

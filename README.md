@@ -187,11 +187,17 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 **Batch options (every `manage_*` tool):** `items` may be replaced by `items_file`, a bare `.json`
 file name in the exchange folder `~/.archi-mcp/exchange` (override with
 `-Darchi.mcp.exchange.dir=<dir>`; paths and symlinks are rejected). `results: "summary"` returns
-`{count, succeeded, failed, errors: [{index, error}]}` instead of one entry per item.
+`{count, succeeded, reused, skipped, failed, errors: [{index, error}]}` (`reused`/`skipped` items are not counted as `succeeded`) instead of one entry per item.
 
 **Caller-supplied IDs:** `create` on elements, relationships and views accepts `id`;
 `add_figure` accepts `figure_id`, `add_connection` accepts `connection_id`. An ID already in the
 model is an item error, or `{skipped: true}` with `on_conflict: "skip"`.
+
+**A relationship or element drawn more than once:** `add_connection` may draw a relationship
+again (e.g. from a second figure). An existing drawing between the same figures (an omitted figure
+ID matches any figure) fails unless `on_existing` is `"reuse"` (returns it with `reused: true`) or
+`"add"` (draws another line). Targeting by `relationship_id` / `element_id` fails when it matches
+more than one drawing; pass `connection_id` / `figure_id`.
 
 **Style vocabulary** (shared by `set_style`, `add_figure`, `add_connection`, `update_connection`
 and `inspect_view definition`; absent = unchanged, `null`/`""` = reset to Archi's default):

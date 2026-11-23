@@ -125,7 +125,9 @@ Quick-reference for an AI agent generating ArchiMate {View Type} Views via the A
 > Relationship items use `source_id` / `target_id` / `type`. Give `access_type` as a name
 > (`Write`, `Read`, `Unspecified`, `ReadWrite`; omitted = Write) and only on Access
 > relationships. If the guide may be re-run on a model that already has the relationships,
-> say whether to pass `on_existing: "reuse"` (re-run is a no-op) or `"add"`.
+> say whether to pass `on_existing: "reuse"` (re-run is a no-op) or `"add"`. The same applies
+> to `add_connection`: re-drawing a relationship between the same figures fails unless
+> `on_existing` is given, and an element shown twice needs `source_figure_id` / `target_figure_id`.
 
 ---
 

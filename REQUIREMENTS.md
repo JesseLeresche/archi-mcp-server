@@ -518,7 +518,8 @@ Every `manage_*` tool takes `operation` plus `items` (one object or an array), o
 `items_file`: a bare `.json` file name in the exchange folder `~/.archi-mcp/exchange`
 (override `-Darchi.mcp.exchange.dir`). Paths, symlinks and non-`.json` names are rejected;
 files over 20 MB are refused. `results: "summary"` replaces the per-item list with
-`{count, succeeded, failed, errors: [{index, error}]}`.
+`{count, succeeded, reused, skipped, failed, errors: [{index, error}]}`; items marked `reused: true` or `skipped: true` count there, not
+under `succeeded`.
 
 **Caller-supplied IDs.** `manage_elements` / `manage_relationships` / `manage_views` `create`
 accept `id`; `add_figure` accepts `figure_id`; `add_connection` accepts `connection_id`.
@@ -539,14 +540,28 @@ specialisation; `null`/`""` clears it. `query_model` and `get_element_analysis` 
 | Operation | Item |
 |---|---|
 | `add_figure` | `{kind?: element\|group\|note, element_id (element), name?, documentation? (group), content? (note), x?, y?, width?, height?, parent_figure_id?, figure_id?, on_conflict?, <style>}` |
-| `remove_figure` | `{figure_id?\|element_id?}` |
-| `add_connection` | `{relationship_id, source_figure_id?, target_figure_id?, connection_id?, bendpoints?, <style>}` |
+| `remove_figure` | `{figure_id?\|element_id?}` (`element_id` fails if the element has more than one figure; pass `figure_id`) |
+| `add_connection` | `{relationship_id, source_figure_id?, target_figure_id?, connection_id?, on_conflict?, on_existing?: reuse\|add, bendpoints?, <style>}` |
 | `update_connection` | `{connection_id?\|relationship_id?, bendpoints?, <style>}` |
 | `remove_connection` | `{connection_id?\|relationship_id?}`: removes the drawing only; delete the relationship with `manage_relationships delete` |
 
 `parent_figure_id` may name a figure added earlier in the same batch. A connection endpoint
 named by figure ID must be an element figure showing that end of the relationship.
 All figures in one `add_figure` call are added in a single undoable command.
+
+**A relationship drawn more than once.** `add_connection` may draw a relationship again, for
+example from a second figure of its source. An existing drawing between the same figures (an
+omitted figure ID matches any figure of that element) fails the item with `Relationship <id> is
+already drawn as connection <cid> between these figures; pass on_existing: "reuse" or "add"`.
+`"reuse"` returns `{connection_id, reused: true}` of the first match and changes nothing (style,
+bendpoints and `connection_id` are ignored); `"add"` draws another line. Any other value is an
+item error. An omitted end whose element is shown more than once fails with `Element <id> has <n>
+figures on view <viewId> (<f1>, <f2>); pass source_figure_id` (or `target_figure_id`).
+Wherever a `relationship_id` or `element_id` targets one drawing (`update_connection`,
+`remove_connection`, `remove_figure`, `set_style`, `get_connection`, `inspect_view layout`), it
+fails when the relationship or element is drawn more than once, listing the IDs and asking for
+`connection_id` / `figure_id`. `inspect_view connections` and `get_element_analysis` list every
+drawing.
 
 **Styling** (`manage_appearance set_style`): `{view_id?, figure_id?|element_id?|connection_id?|relationship_id?, <style>, x?, y?, width?, height?}`; bounds only for figures.
 

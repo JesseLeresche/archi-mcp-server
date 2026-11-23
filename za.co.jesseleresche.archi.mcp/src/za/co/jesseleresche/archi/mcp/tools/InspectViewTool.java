@@ -26,6 +26,8 @@ public class InspectViewTool extends ConsolidatedTool {
                 + "layout: figure positions/sizes, optional {element_id?|figure_id?} filter; "
                 + "connections: visual connections, optional {relationship_id?} filter; "
                 + "get_connection: one connection's visual properties via {connection_id?|relationship_id?}; "
+                + "(layout's element_id and get_connection's relationship_id fail if drawn more than once; pass "
+                + "figure_id/connection_id); "
                 + "definition: the full replayable view {view, elements, relationships, figures, connections} "
                 + "using the same field names as manage_views/manage_elements/manage_relationships create and "
                 + "manage_view_content add_figure/add_connection (figures parent-before-child), optional "
@@ -40,7 +42,7 @@ public class InspectViewTool extends ConsolidatedTool {
         ObjectNode props = schema.putObject("properties");
         addOperation(props, new String[] {"layout", "connections", "get_connection", "definition"});
         addStringProp(props, "view_id", "ID of the view to inspect.");
-        addStringProp(props, "element_id", "For layout: filter to this element's figure.");
+        addStringProp(props, "element_id", "For layout: filter to this element's figure (fails if it has several; pass figure_id).");
         addStringProp(props, "figure_id", "For layout: filter to this figure ID.");
         addStringProp(props, "relationship_id",
                 "For connections (filter) or get_connection (identify the connection).");

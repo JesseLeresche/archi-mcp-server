@@ -306,14 +306,32 @@ public class ModelAccessor {
     }
 
     /**
-     * Find the first figure on a view whose archimateElement has the given element ID.
-     * Searches recursively through nested containers.
+     * The one figure on a view showing the element, or null if none.
+     * Throws when the element is shown more than once: the caller must pass a figure_id.
      */
     public static IDiagramModelArchimateObject findFigureByElementId(
-            IArchimateDiagramModel view, String elementId) {
-        return collectAllFigures(view).stream()
-                .filter(dmo -> elementId.equals(dmo.getArchimateElement().getId()))
-                .findFirst().orElse(null);
+            IArchimateDiagramModel view, String elementId) throws Exception {
+        return single(findAllFiguresByElementId(view, elementId),
+                "Element " + elementId, "figures", view, "figure_id");
+    }
+
+    /** null for none, the item for one, else an error listing the ids and naming the parameter. */
+    private static <T extends com.archimatetool.model.IIdentifier> T single(
+            List<T> all, String subject, String noun, IArchimateDiagramModel view, String param)
+            throws Exception {
+        if (all.size() > 1) {
+            throw new Exception(ambiguous(all, subject, noun, view, param));
+        }
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /** "<subject> has <n> <noun> on view <viewId> (<id1>, <id2>); pass <param>". */
+    public static String ambiguous(List<? extends com.archimatetool.model.IIdentifier> all,
+            String subject, String noun, IArchimateDiagramModel view, String param) {
+        return subject + " has " + all.size() + " " + noun + " on view " + view.getId() + " ("
+                + all.stream().map(com.archimatetool.model.IIdentifier::getId)
+                        .collect(java.util.stream.Collectors.joining(", "))
+                + "); pass " + param;
     }
 
     /**
@@ -364,13 +382,13 @@ public class ModelAccessor {
     }
 
     /**
-     * Find an existing visual connection on a view for a given relationship ID: the first
-     * match in {@link #connectionsOnView} order. Returns null if none.
+     * The one connection on a view drawing the relationship, or null if none.
+     * Throws when it is drawn more than once: the caller must pass a connection_id.
      */
     public static IDiagramModelArchimateConnection findConnectionByRelationshipId(
-            IArchimateDiagramModel view, String relationshipId) {
-        List<IDiagramModelArchimateConnection> all = findConnectionsByRelationshipId(view, relationshipId);
-        return all.isEmpty() ? null : all.get(0);
+            IArchimateDiagramModel view, String relationshipId) throws Exception {
+        return single(findConnectionsByRelationshipId(view, relationshipId),
+                "Relationship " + relationshipId, "connections", view, "connection_id");
     }
 
     /**

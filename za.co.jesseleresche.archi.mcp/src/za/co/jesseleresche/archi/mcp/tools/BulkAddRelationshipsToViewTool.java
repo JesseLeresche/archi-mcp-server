@@ -58,8 +58,20 @@ public class BulkAddRelationshipsToViewTool implements ITool {
         itemProps.putObject("relationship_id").put("type", "string");
         itemProps.putObject("label_expression").put("type", "string")
                 .put("description", "Archi Label Expression, e.g. \"${name}\\n${property:protocol}\"; null/\"\" clears");
-        itemProps.putObject("source_figure_id").put("type", "string");
-        itemProps.putObject("target_figure_id").put("type", "string");
+        itemProps.putObject("source_figure_id").put("type", "string")
+                .put("description", "Figure to draw from; required when the source element is shown more than once");
+        itemProps.putObject("target_figure_id").put("type", "string")
+                .put("description", "Figure to draw to; required when the target element is shown more than once");
+        itemProps.putObject("connection_id").put("type", "string")
+                .put("description", "Caller-chosen ID for the new connection");
+        itemProps.putObject("on_conflict").put("type", "string")
+                .put("description", "\"error\" (default) or \"skip\": a taken connection_id fails or is reported as skipped");
+        ObjectNode onExisting = itemProps.putObject("on_existing");
+        onExisting.put("type", "string");
+        onExisting.put("description", "When the relationship is already drawn between the same figures "
+                + "(an omitted figure ID matches any figure): \"reuse\" returns that connection with reused: true, "
+                + "\"add\" draws another line. Without it such an item fails.");
+        onExisting.putArray("enum").add("reuse").add("add");
         ObjectNode bendpoints = itemProps.putObject("bendpoints");
         bendpoints.put("type", "array");
         ObjectNode bpItems = bendpoints.putObject("items");
@@ -129,33 +141,49 @@ public class BulkAddRelationshipsToViewTool implements ITool {
                         continue;
                     }
 
-                    IDiagramModelArchimateObject sourceFigure =
-                            endpoint(view, item, "source_figure_id", relationship.getSource());
-                    if (sourceFigure == null) {
+                    String onExisting = item.path("on_existing").asText(null);
+                    if (onExisting != null && !onExisting.equals("reuse") && !onExisting.equals("add")) {
+                        throw new Exception("on_existing must be 'reuse' or 'add'");
+                    }
+
+                    // Given ends resolve to one figure; an omitted end may be any figure of its element
+                    List<IDiagramModelArchimateObject> sources =
+                            endpoints(view, item, "source_figure_id", relationship.getSource());
+                    if (sources.isEmpty()) {
                         entry.put("error", "Source element '" + relationship.getSource().getName()
                                 + "' not found on view. Add it with add_figure first.");
                         entries.add(entry);
                         continue;
                     }
-
-                    IDiagramModelArchimateObject targetFigure =
-                            endpoint(view, item, "target_figure_id", relationship.getTarget());
-                    if (targetFigure == null) {
+                    List<IDiagramModelArchimateObject> targets =
+                            endpoints(view, item, "target_figure_id", relationship.getTarget());
+                    if (targets.isEmpty()) {
                         entry.put("error", "Target element '" + relationship.getTarget().getName()
                                 + "' not found on view. Add it with add_figure first.");
                         entries.add(entry);
                         continue;
                     }
 
-                    // Check for existing connection
-                    IDiagramModelArchimateConnection existing =
-                            ModelAccessor.findConnectionByRelationshipId(view, relationshipId);
-                    if (existing != null) {
+                    // An existing drawing between the same figures (omitted end = any figure)
+                    IDiagramModelArchimateConnection existing = ModelAccessor
+                            .findConnectionsByRelationshipId(view, relationshipId).stream()
+                            .filter(c -> sources.contains(c.getSource()) && targets.contains(c.getTarget()))
+                            .findFirst().orElse(null);
+                    if (existing != null && onExisting == null) {
+                        throw new Exception("Relationship " + relationshipId + " is already drawn as connection "
+                                + existing.getId() + " between these figures; pass on_existing: \"reuse\" or \"add\"");
+                    }
+                    if (existing != null && onExisting.equals("reuse")) {
                         entry.put("connection_id", existing.getId());
-                        entry.put("already_exists", true);
+                        entry.put("reused", true);
                         entries.add(entry);
                         continue;
                     }
+
+                    IDiagramModelArchimateObject sourceFigure =
+                            single(sources, view, relationship.getSource(), "source_figure_id");
+                    IDiagramModelArchimateObject targetFigure =
+                            single(targets, view, relationship.getTarget(), "target_figure_id");
 
                     String connectionId = ModelAccessor.requestedId(item, "connection_id");
                     if (connectionId != null
@@ -203,13 +231,13 @@ public class BulkAddRelationshipsToViewTool implements ITool {
     }
 
     /**
-     * The figure for one end of a relationship: the given figure ID (any figure on the view,
-     * which must then be an element figure showing that end) or the first figure of that element.
+     * The candidate figures for one end of a relationship: the given figure ID (any figure on
+     * the view, which must then be an element figure showing that end) or every figure of that element.
      */
-    private static IDiagramModelArchimateObject endpoint(IArchimateDiagramModel view, JsonNode item, String key,
-            com.archimatetool.model.IArchimateConcept end) throws Exception {
+    private static List<IDiagramModelArchimateObject> endpoints(IArchimateDiagramModel view, JsonNode item,
+            String key, com.archimatetool.model.IArchimateConcept end) throws Exception {
         if (!item.hasNonNull(key)) {
-            return ModelAccessor.findFigureByElementId(view, end.getId());
+            return ModelAccessor.findAllFiguresByElementId(view, end.getId());
         }
         String id = item.get(key).asText();
         var fig = ModelAccessor.findDiagramObjectById(view, id);
@@ -224,6 +252,16 @@ public class BulkAddRelationshipsToViewTool implements ITool {
             throw new Exception(key + " " + id + " does not show '" + end.getName()
                     + "', the relationship's " + (key.startsWith("source") ? "source" : "target"));
         }
-        return f;
+        return List.of(f);
+    }
+
+    /** The one candidate figure, or an error asking for the figure ID when the element is shown twice. */
+    private static IDiagramModelArchimateObject single(List<IDiagramModelArchimateObject> figures,
+            IArchimateDiagramModel view, com.archimatetool.model.IArchimateConcept end, String key)
+            throws Exception {
+        if (figures.size() > 1) {
+            throw new Exception(ModelAccessor.ambiguous(figures, "Element " + end.getId(), "figures", view, key));
+        }
+        return figures.get(0);
     }
 }

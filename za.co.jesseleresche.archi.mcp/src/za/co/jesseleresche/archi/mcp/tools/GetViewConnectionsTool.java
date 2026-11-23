@@ -48,7 +48,7 @@ public class GetViewConnectionsTool implements ITool {
         ObjectNode relationshipId = properties.putObject("relationship_id");
         relationshipId.put("type", "string");
         relationshipId.put("description",
-                "Optional: return only the connection for this relationship");
+                "Optional: return only the connections drawing this relationship");
 
         ArrayNode required = schema.putArray("required");
         required.add("view_id");

@@ -31,7 +31,8 @@ abstract class ConsolidatedTool implements ITool {
 
     /**
      * Runs the operation, then applies {@code results}: "full" (default) returns every per-item
-     * entry; "summary" returns {@code {count, succeeded, failed, errors: [{index, error}]}}
+     * entry; "summary" returns {@code {count, succeeded, reused, skipped, failed, errors: [{index, error}]}}
+     * (an entry with {@code reused} or {@code skipped} true is not counted as succeeded)
      * so large batches don't flood the client.
      */
     @Override
@@ -50,13 +51,22 @@ abstract class ConsolidatedTool implements ITool {
         }
         ObjectNode summary = MAPPER.createObjectNode();
         ArrayNode errors = MAPPER.createArrayNode();
+        int reused = 0;
+        int skipped = 0;
         for (int i = 0; i < results.size(); i++) {
-            if (results.get(i).has("error")) {
-                errors.addObject().put("index", i).put("error", results.get(i).get("error").asText());
+            JsonNode r = results.get(i);
+            if (r.has("error")) {
+                errors.addObject().put("index", i).put("error", r.get("error").asText());
+            } else if (r.path("reused").asBoolean()) {
+                reused++;
+            } else if (r.path("skipped").asBoolean()) {
+                skipped++;
             }
         }
         summary.put("count", results.size());
-        summary.put("succeeded", results.size() - errors.size());
+        summary.put("succeeded", results.size() - errors.size() - reused - skipped);
+        summary.put("reused", reused);
+        summary.put("skipped", skipped);
         summary.put("failed", errors.size());
         summary.set("errors", errors);
         return MAPPER.writeValueAsString(summary);
@@ -231,7 +241,8 @@ abstract class ConsolidatedTool implements ITool {
                         + "(~/.archi-mcp/exchange) holding the items array. Paths are rejected.");
         props.putObject("results").put("type", "string").put("description",
                 "\"full\" (default) returns an entry per item; \"summary\" returns "
-                        + "{count, succeeded, failed, errors: [{index, error}]}.")
+                        + "{count, succeeded, reused, skipped, failed, errors: [{index, error}]}; reused and "
+                        + "skipped items are not counted as succeeded.")
                 .putArray("enum").add("full").add("summary");
         ObjectNode items = props.putObject("items");
         items.put("description", description);

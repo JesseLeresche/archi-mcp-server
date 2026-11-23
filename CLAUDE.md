@@ -66,10 +66,11 @@ wrapping, so consolidated tools must **never** wrap delegate calls in their own 
 
 - Styling goes through `FigureStyle.apply/read/copy` (one vocabulary for figures and connections); never hand-roll setters in a tool
 - Relationship `access_type` / `influence_strength` / `directed` go through `RelationshipAttributes` (check before mutating, apply, read as names); never `asInt()` an access type in a tool
-- `ConsolidatedTool.execute` is final: subclasses implement `executeOperation`; it handles `results: "summary"`, and `normalizeItems` handles `items_file`
+- `ConsolidatedTool.execute` is final: subclasses implement `executeOperation`; it handles `results: "summary"` (`{count, succeeded, reused, skipped, failed, errors}`; `reused`/`skipped` entries are not `succeeded`), and `normalizeItems` handles `items_file`
 - Files clients name (`items_file`, `output_file`) go through `ExchangeDir` only — never accept a path
 - All `ITool.execute()` methods return a JSON string (serialized via Jackson) and throw `Exception` on failure
 - Consolidated `manage_*` tools delegate to per-operation tool classes; do not reimplement model logic in them
+- `ModelAccessor.findFigureByElementId` / `findConnectionByRelationshipId` throw when the element/relationship is drawn more than once ("pass figure_id" / "pass connection_id"); use `findAllFiguresByElementId` / `findConnectionsByRelationshipId` to enumerate
 - Element/relationship type resolution is case-insensitive against `IArchimatePackage.eINSTANCE`
 - Visual connections use `connection.connect(source, target)` — never manually add to `view.getChildren()`. Note `connect`/`reconnect` re-sync the relationship's source/target to the figures' elements
 - Removing figures or connections goes through `util/ConnectableRemoval` (subtree + every attached connection, undoable); never `EcoreUtil.delete`
