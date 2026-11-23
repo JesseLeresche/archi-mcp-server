@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
+import com.archimatetool.model.IDiagramModelArchimateConnection;
+import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelGroup;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -98,5 +100,63 @@ class BulkUpdateFigureAppearanceToolTest {
     void rejectsEmptyUpdates() {
         Exception e = assertThrows(Exception.class, () -> run(tool, "{'updates':[]}"));
         assertTrue(e.getMessage().contains("'updates' must be a non-empty array"));
+    }
+
+    // --- multiple drawings per view (multiple-connections spec S14, S15, S18) ---
+
+    IArchimateDiagramModel v;
+    IDiagramModelArchimateObject e1, e2, f;
+    IArchimateRelationship rel;
+    IDiagramModelArchimateConnection c1, c2;
+
+    /** View V: element E shown as e1 and e2, F as f, relationship R drawn e1-f (c1) and e2-f (c2). */
+    void shared() {
+        v = models.view("V");
+        IArchimateElement e = models.element("ApplicationComponent", "E");
+        IArchimateElement fe = models.element("ApplicationComponent", "F");
+        e1 = models.figure(v, e, 0, 0, 120, 55);
+        e2 = models.figure(v, e, 0, 200, 120, 55);
+        f = models.figure(v, fe, 300, 0, 120, 55);
+        rel = models.relationship("ServingRelationship", e, fe);
+        c1 = models.connection(e1, f, rel);
+        c2 = models.connection(e2, f, rel);
+    }
+
+    /** S14 / FR-6. */
+    @Test
+    void setStyleByRelationshipIdRejectsAmbiguous() throws Exception {
+        shared();
+        JsonNode r = run(tool, "{'updates':[{'view_id':'" + v.getId() + "','relationship_id':'" + rel.getId()
+                + "','line_color':'#ff0000'}]}").get("results").get(0);
+        TestModels.assertMentions(r.path("error").asText(null), rel.getId(), "2 connections", c1.getId(), c2.getId(),
+                "pass connection_id");
+        assertNull(c1.getLineColor());
+        assertNull(c2.getLineColor());
+    }
+
+    /** S18 / FR-8. */
+    @Test
+    void setStyleByElementIdRejectsAmbiguous() throws Exception {
+        shared();
+        String eid = e1.getArchimateElement().getId();
+        JsonNode r = run(tool, "{'updates':[{'view_id':'" + v.getId() + "','element_id':'" + eid
+                + "','fill_color':'#aabbcc','x':50}]}").get("results").get(0);
+        TestModels.assertMentions(r.path("error").asText(null), eid, "2 figures", e1.getId(), e2.getId(),
+                "pass figure_id");
+        assertNull(e1.getFillColor());
+        assertNull(e2.getFillColor());
+        assertEquals(0, e1.getBounds().getX());
+        assertEquals(0, e2.getBounds().getX());
+    }
+
+    /** S15 / FR-7. */
+    @Test
+    void connectionIdTargetsOneOfSeveralDrawings() throws Exception {
+        shared();
+        JsonNode r = run(tool, "{'updates':[{'view_id':'" + v.getId() + "','connection_id':'" + c2.getId()
+                + "','line_color':'#ff0000'}]}").get("results").get(0);
+        assertFalse(r.has("error"), r.toString());
+        assertEquals("#ff0000", c2.getLineColor());
+        assertNull(c1.getLineColor());
     }
 }

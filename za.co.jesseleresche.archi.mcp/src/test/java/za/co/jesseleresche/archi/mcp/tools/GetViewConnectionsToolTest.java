@@ -114,4 +114,23 @@ class GetViewConnectionsToolTest {
         JsonNode plain = byRelationship(all, serving.getId());
         assertFalse(plain.has("access_type") || plain.has("influence_strength") || plain.has("directed"), plain.toString());
     }
+
+    /** S17 / FR-10. */
+    @Test
+    void relationshipFilterReturnsEveryDrawing() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IDiagramModelArchimateObject fa1 = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fa2 = models.figure(v, a, 0, 200, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(v, b, 300, 0, 120, 55);
+        IArchimateRelationship rel = models.relationship("ServingRelationship", a, b);
+        IDiagramModelArchimateConnection c1 = models.connection(fa1, fb, rel);
+        IDiagramModelArchimateConnection c2 = models.connection(fa2, fb, rel);
+        JsonNode only = run(tool, "{'view_id':'" + v.getId() + "','relationship_id':'" + rel.getId() + "'}")
+                .get("connections");
+        assertEquals(2, only.size(), only.toString());
+        assertEquals(java.util.Set.of(c1.getId(), c2.getId()),
+                java.util.Set.of(only.get(0).get("connection_id").asText(), only.get(1).get("connection_id").asText()));
+    }
 }

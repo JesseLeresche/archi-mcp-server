@@ -90,4 +90,18 @@ class GetElementAnalysisToolTest {
         ModelAccessor.applySpecialization(models.model, actor, TestModels.json("{'specialization':'Customer'}"));
         assertEquals("Customer", run(tool, "{'element_id':'" + actor.getId() + "'}").get("specialization").asText());
     }
+
+    /** S21 / FR-13. */
+    @Test
+    void usedInViewsListsEveryFigure() throws Exception {
+        IDiagramModelArchimateObject fig2 = models.figure(view, actor, 10, 200, 120, 55);
+        JsonNode used = run(tool, "{'element_id':'" + actor.getId() + "'}").get("used_in_views");
+        assertEquals(2, used.size(), used.toString());
+        java.util.Set<String> figs = new java.util.HashSet<>();
+        for (JsonNode u : used) {
+            assertEquals(view.getId(), u.get("view_id").asText());
+            figs.add(u.get("figure_id").asText());
+        }
+        assertEquals(java.util.Set.of(fig.getId(), fig2.getId()), figs);
+    }
 }

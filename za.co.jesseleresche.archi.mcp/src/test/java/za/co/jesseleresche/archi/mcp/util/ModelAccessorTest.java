@@ -42,7 +42,7 @@ class ModelAccessorTest {
     }
 
     @Test
-    void findsObjectsById() {
+    void findsObjectsById() throws Exception {
         IArchimateElement a = models.element("BusinessActor", "A");
         IArchimateElement b = models.element("BusinessRole", "B");
         IArchimateRelationship r = models.relationship("AssignmentRelationship", a, b);
@@ -108,7 +108,7 @@ class ModelAccessorTest {
 
     /** FR-8: a connection whose source figure was detached (target-side ghost) is still found. */
     @Test
-    void findsConnectionWhoseSourceIsDetached() {
+    void findsConnectionWhoseSourceIsDetached() throws Exception {
         IArchimateElement c = models.element("ApplicationComponent", "C");
         IArchimateElement t = models.element("ApplicationComponent", "T");
         IArchimateRelationship r = models.relationship("ServingRelationship", c, t);
@@ -141,5 +141,52 @@ class ModelAccessorTest {
 
         // A: source K1, target K2; B: source K3 (target K1 already seen); C: nothing new; then L.
         assertEquals(java.util.List.of(k1, k2, k3, l), new java.util.ArrayList<>(ModelAccessor.connectionsOnView(v)));
+    }
+
+    // --- multiple drawings per view (multiple-connections spec FR-6, FR-8) ---
+
+    @Test
+    void findConnectionsByRelationshipIdReturnsAllInViewOrder() {
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IArchimateRelationship r = models.relationship("ServingRelationship", a, b);
+        IArchimateDiagramModel v = models.view("V");
+        IDiagramModelArchimateObject fa = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(v, b, 300, 0, 120, 55);
+        assertTrue(ModelAccessor.findConnectionsByRelationshipId(v, r.getId()).isEmpty());
+        var c1 = models.connection(fa, fb, r);
+        var c2 = models.connection(fa, fb, r);
+        assertEquals(java.util.List.of(c1, c2), ModelAccessor.findConnectionsByRelationshipId(v, r.getId()));
+    }
+
+    @Test
+    void findConnectionByRelationshipIdRejectsAmbiguous() throws Exception {
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IArchimateRelationship r = models.relationship("ServingRelationship", a, b);
+        IArchimateDiagramModel v = models.view("V");
+        IDiagramModelArchimateObject fa = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(v, b, 300, 0, 120, 55);
+        assertNull(ModelAccessor.findConnectionByRelationshipId(v, r.getId()));
+        var c1 = models.connection(fa, fb, r);
+        assertSame(c1, ModelAccessor.findConnectionByRelationshipId(v, r.getId()));
+        var c2 = models.connection(fa, fb, r);
+        Exception e = assertThrows(Exception.class, () -> ModelAccessor.findConnectionByRelationshipId(v, r.getId()));
+        TestModels.assertMentions(e.getMessage(), r.getId(), "2 connections", v.getId(), c1.getId(), c2.getId(),
+                "pass connection_id");
+    }
+
+    @Test
+    void findFigureByElementIdRejectsAmbiguous() throws Exception {
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateDiagramModel v = models.view("V");
+        assertNull(ModelAccessor.findFigureByElementId(v, a.getId()));
+        IDiagramModelArchimateObject f1 = models.figure(v, a, 0, 0, 120, 55);
+        assertSame(f1, ModelAccessor.findFigureByElementId(v, a.getId()));
+        IDiagramModelGroup g = models.group(v, "G", 0, 200, 400, 300);
+        IDiagramModelArchimateObject f2 = models.figure(g, a, 10, 30, 120, 55);
+        Exception e = assertThrows(Exception.class, () -> ModelAccessor.findFigureByElementId(v, a.getId()));
+        TestModels.assertMentions(e.getMessage(), a.getId(), "2 figures", v.getId(), f1.getId(), f2.getId(),
+                "pass figure_id");
     }
 }

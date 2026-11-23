@@ -213,6 +213,38 @@ class ManageRelationshipsToolTest {
         }
     }
 
+    /** QR-37 summary counts (deferred to multiple-connections FR-5): skipped and reused are not succeeded. */
+    @Test
+    void replayRerunSummaryCountsSkippedAndReused() throws Exception {
+        replaySource();
+        JsonNode entries = queryAll().get("relationships");
+        int n = entries.size();
+
+        target("SameIds");
+        assertNoErrors(create(entries));
+        JsonNode sum = createSummary(with(entries, "on_conflict", "skip"));
+        assertEquals(n, sum.get("count").asInt(), sum.toString());
+        assertEquals(n, sum.path("skipped").asInt(), sum.toString());
+        assertEquals(0, sum.path("reused").asInt(), sum.toString());
+        assertEquals(0, sum.get("succeeded").asInt(), sum.toString());
+        assertEquals(0, sum.get("failed").asInt(), sum.toString());
+
+        target("OtherIds");
+        assertNoErrors(create(without(entries, "id")));
+        sum = createSummary(with(entries, "on_existing", "reuse"));
+        assertEquals(n, sum.get("count").asInt(), sum.toString());
+        assertEquals(n, sum.path("reused").asInt(), sum.toString());
+        assertEquals(0, sum.path("skipped").asInt(), sum.toString());
+        assertEquals(0, sum.get("succeeded").asInt(), sum.toString());
+        assertEquals(0, sum.get("failed").asInt(), sum.toString());
+    }
+
+    private JsonNode createSummary(JsonNode items) throws Exception {
+        ObjectNode args = json("{'operation':'create','results':'summary'}").deepCopy();
+        args.set("items", items);
+        return json(tool.execute(args));
+    }
+
     /** Access (Read, full detail), Influence (+), directed Association, Serving; undrawn, in subfolders. */
     private void replaySource() {
         IArchimateModel m = models.model;

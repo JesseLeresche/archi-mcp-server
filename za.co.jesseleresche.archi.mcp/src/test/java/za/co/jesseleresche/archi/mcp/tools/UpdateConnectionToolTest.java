@@ -97,4 +97,30 @@ class UpdateConnectionToolTest {
         e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + vid + "','relationship_id':'y'}"));
         assertTrue(e.getMessage().contains("No connection found for relationship on view: y"));
     }
+
+    /** S15 / FR-7: connection_id targets one of several drawings of a relationship. */
+    @Test
+    void connectionIdTargetsOneOfSeveralDrawings() throws Exception {
+        setUp();
+        IDiagramModelArchimateConnection c2 = models.connection(
+                (IDiagramModelArchimateObject) c.getSource(), (IDiagramModelArchimateObject) c.getTarget(), rel);
+        run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + c2.getId() + "','line_color':'#ff0000'}");
+        assertEquals("#ff0000", c2.getLineColor());
+        assertNull(c.getLineColor());
+    }
+
+    /** S14 / FR-6. */
+    @Test
+    void updateByRelationshipIdRejectsAmbiguous() {
+        setUp();
+        IDiagramModelArchimateConnection c2 = models.connection(
+                (IDiagramModelArchimateObject) c.getSource(), (IDiagramModelArchimateObject) c.getTarget(), rel);
+        Exception e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + v.getId()
+                + "','relationship_id':'" + rel.getId() + "','line_color':'#ff0000'}"));
+        TestModels.assertMentions(e.getMessage(), rel.getId(), "2 connections", c.getId(), c2.getId(),
+                "pass connection_id");
+        assertNull(c.getLineColor());
+        assertNull(c2.getLineColor());
+        assertEquals(0, models.saves);
+    }
 }

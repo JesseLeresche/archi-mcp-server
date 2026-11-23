@@ -88,4 +88,27 @@ class DeleteConnectionToolTest {
         assertTrue(ft.getTargetConnections().isEmpty());
         assertEquals(1, models.saves);
     }
+
+    /** S15 / FR-7: connection_id removes only that drawing. */
+    @Test
+    void connectionIdTargetsOneOfSeveralDrawings() throws Exception {
+        setUp();
+        IDiagramModelArchimateConnection c2 = models.connection(fa, (IDiagramModelArchimateObject) c.getTarget(), rel);
+        run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + c2.getId() + "'}");
+        assertNull(ModelAccessor.findConnectionById(v, c2.getId()));
+        assertSame(c, ModelAccessor.findConnectionById(v, c.getId()));
+    }
+
+    /** S14 / FR-6. */
+    @Test
+    void removeByRelationshipIdRejectsAmbiguous() {
+        setUp();
+        IDiagramModelArchimateConnection c2 = models.connection(fa, (IDiagramModelArchimateObject) c.getTarget(), rel);
+        Exception e = assertThrows(Exception.class,
+                () -> run(tool, "{'view_id':'" + v.getId() + "','relationship_id':'" + rel.getId() + "'}"));
+        TestModels.assertMentions(e.getMessage(), rel.getId(), "2 connections", c.getId(), c2.getId(),
+                "pass connection_id");
+        assertEquals(2, ModelAccessor.findConnectionsByRelationshipId(v, rel.getId()).size());
+        assertEquals(0, models.saves);
+    }
 }

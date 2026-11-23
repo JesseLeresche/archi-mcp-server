@@ -83,4 +83,16 @@ class GetViewLayoutToolTest {
         e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + vid + "','element_id':'y'}"));
         assertTrue(e.getMessage().contains("No figure found for element on view: y"));
     }
+
+    /** S18 / FR-8 (and S19 / FR-9: one figure is still found by element_id, see filtersByFigureOrElementId). */
+    @Test
+    void layoutByElementIdRejectsAmbiguous() {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement a = models.element("BusinessActor", "A");
+        IDiagramModelArchimateObject f1 = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject f2 = models.figure(v, a, 0, 200, 120, 55);
+        Exception e = assertThrows(Exception.class,
+                () -> run(tool, "{'view_id':'" + v.getId() + "','element_id':'" + a.getId() + "'}"));
+        TestModels.assertMentions(e.getMessage(), a.getId(), "2 figures", f1.getId(), f2.getId(), "pass figure_id");
+    }
 }

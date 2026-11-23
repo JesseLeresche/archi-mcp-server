@@ -177,7 +177,65 @@ class GetViewDefinitionToolTest {
         assertNotSame(target, models.model);
     }
 
-    private static void replay(ConsolidatedTool tool, String op, String viewId, JsonNode items) throws Exception {
+    /** S10 / FR-11: R drawn twice between the same figures and once from a second figure of its source. */
+    @Test
+    void replayRecreatesDuplicateDrawingsOfARelationship() throws Exception {
+        var fs = ModelAccessor.findAllFiguresByElementId(view, svc.getId()).get(0);
+        var fa = ModelAccessor.findAllFiguresByElementId(view, app.getId()).get(0);
+        var fs2 = models.figure(view, svc, 600, 200, 120, 55);
+        models.connection(fs2, fa, serves);
+        models.connection(fs, fa, serves);
+
+        JsonNode d = replayDefinitionWithOnExistingAdd();
+        assertEquals(3, d.get("connections").size());
+
+        JsonNode again = run(inspect, "{'operation':'definition','model':'Target','view_id':'" + view.getId() + "'}");
+        assertEquals(d, again);
+    }
+
+    /** S11 / FR-11: re-running the replay's add_connection step with on_conflict "skip" creates nothing. */
+    @Test
+    void rerunReplayWithSkipCreatesNothing() throws Exception {
+        var fs = ModelAccessor.findAllFiguresByElementId(view, svc.getId()).get(0);
+        var fa = ModelAccessor.findAllFiguresByElementId(view, app.getId()).get(0);
+        var fs2 = models.figure(view, svc, 600, 200, 120, 55);
+        models.connection(fs2, fa, serves);
+        models.connection(fs, fa, serves);
+        JsonNode d = replayDefinitionWithOnExistingAdd();
+
+        JsonNode r = replay(new ManageViewContentTool(), "add_connection", view.getId(),
+                withEach(withEach(d.get("connections"), "on_existing", "add"), "on_conflict", "skip"));
+        for (int i = 0; i < r.size(); i++) {
+            assertTrue(r.get(i).path("skipped").asBoolean(), r.get(i).toString());
+            assertEquals(d.get("connections").get(i).get("connection_id").asText(),
+                    r.get(i).get("connection_id").asText());
+        }
+        JsonNode again = run(inspect, "{'operation':'definition','model':'Target','view_id':'" + view.getId() + "'}");
+        assertEquals(d, again);
+    }
+
+    /** Write V's definition, replay it into a new "Target" model (add_connection with on_existing "add"). */
+    private JsonNode replayDefinitionWithOnExistingAdd() throws Exception {
+        definition(",'output_file':'ctx.json'");
+        JsonNode d = ExchangeDir.read("ctx.json");
+        models.newModel("Target");
+        ModelAccessor.selectModel("Target");
+        run(new ManageViewsTool(), "{'operation':'create','items':" + d.get("view") + "}");
+        replay(new ManageElementsTool(), "create", null, d.get("elements"));
+        replay(new ManageRelationshipsTool(), "create", null, d.get("relationships"));
+        replay(new ManageViewContentTool(), "add_figure", view.getId(), d.get("figures"));
+        replay(new ManageViewContentTool(), "add_connection", view.getId(),
+                withEach(d.get("connections"), "on_existing", "add"));
+        return d;
+    }
+
+    private static JsonNode withEach(JsonNode items, String key, String value) {
+        JsonNode out = items.deepCopy();
+        out.forEach(n -> ((ObjectNode) n).put(key, value));
+        return out;
+    }
+
+    private static JsonNode replay(ConsolidatedTool tool, String op, String viewId, JsonNode items) throws Exception {
         ObjectNode args = json("{}").deepCopy();
         args.put("operation", op);
         if (viewId != null) {
@@ -188,6 +246,7 @@ class GetViewDefinitionToolTest {
         for (JsonNode e : r) {
             assertFalse(e.has("error"), op + ": " + e);
         }
+        return r;
     }
 
     private static JsonNode find(JsonNode arr, String key, String value) {

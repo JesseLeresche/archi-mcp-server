@@ -138,7 +138,10 @@ class DeleteElementToolTest {
         models.assertNoDanglingConnections();
     }
 
-    /** S1.4 / FR-1, FR-7: an element shown twice on one view loses both figures. */
+    /**
+     * S1.4 / FR-1, FR-7: an element shown twice on one view loses both figures.
+     * Also multiple-connections S20 / FR-12 (merged; its dry_run count is in dryRunCountsFiguresNotViews).
+     */
     @Test
     void removesEveryFigureIncludingSecondOnSameView() throws Exception {
         IArchimateElement p = models.element("ApplicationComponent", "P");

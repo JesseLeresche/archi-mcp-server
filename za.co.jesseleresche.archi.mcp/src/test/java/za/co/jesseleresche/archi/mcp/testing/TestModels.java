@@ -105,6 +105,14 @@ public final class TestModels implements BeforeEachCallback, AfterEachCallback {
         }
     }
 
+    /** Fail unless {@code message} is non-null and contains every one of {@code parts}. */
+    public static void assertMentions(String message, String... parts) {
+        for (String p : parts) {
+            org.junit.jupiter.api.Assertions.assertTrue(message != null && message.contains(p),
+                    "expected '" + p + "' in: " + message);
+        }
+    }
+
     /** Run a tool with (single-quote friendly) JSON args and parse the result. */
     public static JsonNode run(ITool tool, String args) throws Exception {
         return JSON.readTree(tool.execute(json(args)));

@@ -137,18 +137,30 @@ class ConsolidatedToolTest {
         ITool tool3 = new Probe() {
             @Override
             protected String executeOperation(JsonNode args) {
-                return "{\"results\":[{\"id\":\"a\"},{\"error\":\"boom\"},{\"id\":\"b\",\"skipped\":true}]}";
+                return "{\"results\":[{\"id\":\"a\"},{\"error\":\"boom\"},{\"id\":\"b\",\"skipped\":true},"
+                        + "{\"id\":\"c\",\"reused\":true}]}";
             }
         };
         JsonNode full = json(tool3.execute(json("{}")));
-        assertEquals(3, full.get("results").size());
+        assertEquals(4, full.get("results").size());
         JsonNode sum = json(tool3.execute(json("{'results':'summary'}")));
-        assertEquals(3, sum.get("count").asInt());
-        assertEquals(2, sum.get("succeeded").asInt());
+        // FR-5: {count, succeeded, reused, skipped, failed, errors}, in that order
+        assertEquals(List.of("count", "succeeded", "reused", "skipped", "failed", "errors"),
+                iterableToList(sum.fieldNames()));
+        assertEquals(4, sum.get("count").asInt());
+        assertEquals(1, sum.get("succeeded").asInt());
+        assertEquals(1, sum.path("reused").asInt());
+        assertEquals(1, sum.path("skipped").asInt());
         assertEquals(1, sum.get("failed").asInt());
         assertEquals(1, sum.get("errors").get(0).get("index").asInt());
         assertEquals("boom", sum.get("errors").get(0).get("error").asText());
         assertFalse(sum.has("results"));
         assertFails("'results' must be 'full' or 'summary'", () -> tool3.execute(json("{'results':'some'}")));
+    }
+
+    private static List<String> iterableToList(java.util.Iterator<String> it) {
+        List<String> out = new java.util.ArrayList<>();
+        it.forEachRemaining(out::add);
+        return out;
     }
 }

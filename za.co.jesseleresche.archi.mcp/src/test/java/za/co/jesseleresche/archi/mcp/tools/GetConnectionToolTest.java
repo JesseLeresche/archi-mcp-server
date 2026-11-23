@@ -113,4 +113,38 @@ class GetConnectionToolTest {
         assertEquals("+", run(tool, byRel + inf.getId() + "'}").get("influence_strength").asText());
         assertTrue(run(tool, byRel + assoc.getId() + "'}").get("directed").asBoolean());
     }
+
+    /** S14 / FR-6, S15 / FR-7. */
+    @Test
+    void getConnectionByRelationshipIdRejectsAmbiguous() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IDiagramModelArchimateObject fa = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(v, b, 300, 0, 120, 55);
+        IArchimateRelationship rel = models.relationship("ServingRelationship", a, b);
+        IDiagramModelArchimateConnection c1 = models.connection(fa, fb, rel);
+        IDiagramModelArchimateConnection c2 = models.connection(fa, fb, rel);
+        Exception e = assertThrows(Exception.class,
+                () -> run(tool, "{'view_id':'" + v.getId() + "','relationship_id':'" + rel.getId() + "'}"));
+        TestModels.assertMentions(e.getMessage(), rel.getId(), "2 connections", c1.getId(), c2.getId(),
+                "pass connection_id");
+    }
+
+    /** S15 / FR-7. */
+    @Test
+    void connectionIdTargetsOneOfSeveralDrawings() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement a = models.element("ApplicationComponent", "A");
+        IArchimateElement b = models.element("ApplicationComponent", "B");
+        IDiagramModelArchimateObject fa = models.figure(v, a, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fb = models.figure(v, b, 300, 0, 120, 55);
+        IArchimateRelationship rel = models.relationship("ServingRelationship", a, b);
+        models.connection(fa, fb, rel);
+        IDiagramModelArchimateConnection c2 = models.connection(fa, fb, rel);
+        c2.setLineColor("#ff0000");
+        JsonNode r = run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + c2.getId() + "'}");
+        assertEquals(c2.getId(), r.get("connection_id").asText());
+        assertEquals("#ff0000", r.get("line_color").asText());
+    }
 }

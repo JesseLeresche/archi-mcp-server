@@ -202,4 +202,84 @@ class ManageViewContentToolTest {
             assertTrue(e.getMessage().contains("'" + p[0] + "' was replaced by '" + p[1] + "'"), e.getMessage());
         }
     }
+
+    // --- multiple drawings per view (multiple-connections spec) ---
+
+    IArchimateDiagramModel v;
+    IDiagramModelArchimateObject e1, e2, f;
+    IArchimateRelationship rel;
+
+    /** View V: element E shown as e1 and e2, element F as f, relationship R from E to F (undrawn). */
+    void shared() {
+        v = models.view("V");
+        IArchimateElement e = models.element("ApplicationComponent", "E");
+        IArchimateElement fe = models.element("ApplicationComponent", "F");
+        e1 = models.figure(v, e, 0, 0, 120, 55);
+        e2 = models.figure(v, e, 0, 200, 120, 55);
+        f = models.figure(v, fe, 300, 0, 120, 55);
+        rel = models.relationship("ServingRelationship", e, fe);
+    }
+
+    String item(IDiagramModelArchimateObject src, String extra) {
+        return "{'relationship_id':'" + rel.getId() + "','source_figure_id':'" + src.getId()
+                + "','target_figure_id':'" + f.getId() + "'" + extra + "}";
+    }
+
+    /** S13 / FR-5. */
+    @Test
+    void summaryCountsReusedAndSkippedConnections() throws Exception {
+        shared();
+        IDiagramModelArchimateConnection c1 = models.connection(e1, f, rel);
+        JsonNode sum = run(tool, "{'operation':'add_connection','view_id':'" + v.getId() + "','results':'summary',"
+                + "'items':[" + item(e2, "") + "," + item(e1, ",'on_existing':'reuse'") + ","
+                + item(e1, ",'on_existing':'add','connection_id':'" + c1.getId() + "','on_conflict':'skip'") + ","
+                + "{'relationship_id':'nope'}]}");
+        assertEquals(4, sum.get("count").asInt(), sum.toString());
+        assertEquals(1, sum.get("succeeded").asInt(), sum.toString());
+        assertEquals(1, sum.path("reused").asInt(), sum.toString());
+        assertEquals(1, sum.path("skipped").asInt(), sum.toString());
+        assertEquals(1, sum.get("failed").asInt(), sum.toString());
+        assertEquals(3, sum.get("errors").get(0).get("index").asInt(), sum.toString());
+        assertEquals(2, ModelAccessor.findConnectionsByRelationshipId(v, rel.getId()).size());
+    }
+
+    /** S14 / FR-6. */
+    @Test
+    void updateByRelationshipIdRejectsAmbiguous() throws Exception {
+        shared();
+        IDiagramModelArchimateConnection c1 = models.connection(e1, f, rel);
+        IDiagramModelArchimateConnection c2 = models.connection(e2, f, rel);
+        JsonNode r = run(tool, "{'operation':'update_connection','view_id':'" + v.getId() + "','items':"
+                + "{'relationship_id':'" + rel.getId() + "','line_color':'#ff0000'}}").get("results").get(0);
+        TestModels.assertMentions(r.path("error").asText(null), rel.getId(), "2 connections", c1.getId(), c2.getId(),
+                "pass connection_id");
+        assertNull(c1.getLineColor());
+        assertNull(c2.getLineColor());
+    }
+
+    /** S14 / FR-6. */
+    @Test
+    void removeByRelationshipIdRejectsAmbiguous() throws Exception {
+        shared();
+        IDiagramModelArchimateConnection c1 = models.connection(e1, f, rel);
+        IDiagramModelArchimateConnection c2 = models.connection(e2, f, rel);
+        JsonNode r = run(tool, "{'operation':'remove_connection','view_id':'" + v.getId() + "','items':"
+                + "{'relationship_id':'" + rel.getId() + "'}}").get("results").get(0);
+        TestModels.assertMentions(r.path("error").asText(null), rel.getId(), "2 connections", c1.getId(), c2.getId(),
+                "pass connection_id");
+        assertEquals(2, ModelAccessor.findConnectionsByRelationshipId(v, rel.getId()).size());
+    }
+
+    /** S18 / FR-8. */
+    @Test
+    void removeFigureByElementIdRejectsAmbiguous() throws Exception {
+        shared();
+        String eid = e1.getArchimateElement().getId();
+        JsonNode r = run(tool, "{'operation':'remove_figure','view_id':'" + v.getId() + "','items':"
+                + "{'element_id':'" + eid + "'}}").get("results").get(0);
+        TestModels.assertMentions(r.path("error").asText(null), eid, "2 figures", e1.getId(), e2.getId(),
+                "pass figure_id");
+        assertNotNull(ModelAccessor.findFigureById(v, e1.getId()));
+        assertNotNull(ModelAccessor.findFigureById(v, e2.getId()));
+    }
 }
