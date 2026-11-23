@@ -81,27 +81,27 @@ An Eclipse OSGi plugin for [Archi](https://www.archimatetool.com/) that implemen
 
    **macOS**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-3.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   cp za.co.jesseleresche.archi.mcp-3.1.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    ```
 
    **Linux**
    ```bash
-   cp za.co.jesseleresche.archi.mcp-3.0.0.jar /opt/Archi/dropins/
+   cp za.co.jesseleresche.archi.mcp-3.1.0.jar /opt/Archi/dropins/
    ```
 
    **Windows** (PowerShell)
    ```powershell
-   Copy-Item za.co.jesseleresche.archi.mcp-3.0.0.jar "C:\Program Files\Archi\dropins\"
+   Copy-Item za.co.jesseleresche.archi.mcp-3.1.0.jar "C:\Program Files\Archi\dropins\"
    ```
 
    > **Upgrading from an earlier version?** Delete any existing
    > `za.co.jesseleresche.archi.mcp-*.jar` from `dropins/` **before** copying the new one.
    > The plugin is a singleton OSGi bundle — if multiple versions are present, Archi may load
-   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-3.0.0.jar`
+   > an old one and your upgrade won't take effect. Only `za.co.jesseleresche.archi.mcp-3.1.0.jar`
    > should remain. For example, on macOS:
    > ```bash
    > rm /Applications/Archi.app/Contents/Eclipse/dropins/za.co.jesseleresche.archi.mcp-*.jar
-   > cp za.co.jesseleresche.archi.mcp-3.0.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
+   > cp za.co.jesseleresche.archi.mcp-3.1.0.jar /Applications/Archi.app/Contents/Eclipse/dropins/
    > ```
 
 3. Restart Archi. The MCP server starts automatically.
@@ -183,6 +183,12 @@ array** (batch) — a single object is treated as a one-item batch. Write tools 
 > `add_connection`, `delete_connection` → `remove_connection`. The old names return an error that
 > names the replacement. `manage_relationships update` now *merges* `properties` (like elements)
 > instead of replacing the whole list.
+>
+> **Changes in v3.1.0:** re-running `add_connection` for a line that is already drawn, or creating a
+> relationship that already exists, now fails until you pass `on_existing: "reuse"` or `"add"`;
+> reused items report `reused: true` (was `already_exists`). Targeting by `element_id` or
+> `relationship_id` fails when the element or relationship is drawn more than once on the view;
+> pass `figure_id` or `connection_id`. `access_type` is reported as a name (`"Read"`, …).
 
 **Batch options (every `manage_*` tool):** `items` may be replaced by `items_file`, a bare `.json`
 file name in the exchange folder `~/.archi-mcp/exchange` (override with
@@ -327,7 +333,7 @@ mvn clean verify
 
 The plugin JAR is produced at:
 ```
-za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-3.0.0.jar
+za.co.jesseleresche.archi.mcp/target/za.co.jesseleresche.archi.mcp-3.1.0.jar
 ```
 
 Jetty and Jackson JARs are downloaded automatically into `lib/` during the build.
