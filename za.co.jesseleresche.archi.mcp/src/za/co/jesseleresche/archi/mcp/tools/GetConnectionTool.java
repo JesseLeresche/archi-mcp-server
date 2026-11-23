@@ -106,6 +106,7 @@ public class GetConnectionTool implements ITool {
         result.put("relationship_id", connection.getArchimateRelationship().getId());
         result.put("relationship_type", connection.getArchimateRelationship().eClass().getName());
         result.put("relationship_name", connection.getArchimateRelationship().getName());
+        RelationshipAttributes.read(connection.getArchimateRelationship(), result);
         result.put("source_figure_id", connection.getSource() != null ? connection.getSource().getId() : null);
         result.put("target_figure_id", connection.getTarget() != null ? connection.getTarget().getId() : null);
         result.put("line_color", connection.getLineColor());

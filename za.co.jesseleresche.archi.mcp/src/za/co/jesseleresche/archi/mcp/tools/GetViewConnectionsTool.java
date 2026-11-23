@@ -7,7 +7,6 @@ import java.util.Map;
 
 import za.co.jesseleresche.archi.mcp.util.FigureStyle;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
-import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
@@ -87,9 +86,7 @@ public class GetViewConnectionsTool implements ITool {
                 entry.put("relationship_id", relId);
                 entry.put("relationship_type",
                         c.getArchimateRelationship().eClass().getName());
-                if (c.getArchimateRelationship() instanceof IAccessRelationship accessRel) {
-                    entry.put("access_type", accessRel.getAccessType());
-                }
+                RelationshipAttributes.read(c.getArchimateRelationship(), entry);
                 entry.put("source_element_id",
                         c.getArchimateRelationship().getSource().getId());
                 entry.put("source_element_name",

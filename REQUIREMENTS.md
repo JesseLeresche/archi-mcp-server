@@ -571,6 +571,38 @@ Optional `model` (name or ID; read-only, selection unchanged) and `output_file` 
 to the exchange folder, never overwriting). Note connectors and diagram references are
 reported under `warnings`, not exported.
 
+**Relationship attributes** (`manage_relationships create` / `update`): `access_type`
+(AccessRelationship only) is `"Write"`, `"Read"`, `"Unspecified"` or `"ReadWrite"`
+(case-insensitive) or Archi's integer (0=Write, 1=Read, 2=Unspecified, 3=ReadWrite); a new
+Access relationship defaults to Write. `influence_strength` (string, `""` clears;
+InfluenceRelationship only) and `directed` (boolean; AssociationRelationship only). Given
+for another type, each is the item error `'<field>' does not apply to <Type>` (on update,
+judged against the type after `new_type`), and nothing in that item changes. An update
+that changes the type reports the old values the new type can't hold (and the
+specialization, unless the item sets one) as `dropped: {field: old value}`. Every output
+(`query`, `inspect_view definition` / `connections` / `get_connection`) reports
+`access_type` as a name, `influence_strength` if set and `directed` only if true.
+
+**`on_existing`** (`manage_relationships create`): if a relationship of the same type
+already joins the same source to the same target (direction matters; earlier items in
+the batch count), the item fails with `relationship <id> already exists between these
+elements; pass on_existing: "reuse" or "add"`. `"reuse"` returns `{id, reused: true,
+folder_path}` of the existing one (first in folder order) and changes nothing; `"add"`
+creates another. A caller `id` that already exists is decided by `on_conflict` alone.
+
+**`manage_relationships query`**: each item is a filter `{element_id?, type_filter?,
+on_view?, model?, output_file?}` (AND; `element_id` matches either end; `on_view`
+true/false = drawn on some/no view). Returns `{count, relationships}` over every
+relationship in the model in folder order, each entry in create's field names
+(`id, type, name, documentation?, folder_path, properties?, specialization?, source_id,
+target_id, access_type?, influence_strength?, directed?`) plus read-only `views` (view IDs,
+each once). With `output_file`, the bare entry array is written to the exchange folder
+(never overwriting) and the result is `{output_file, count}`. Read-only; `model` as for
+`definition`. Unknown type, element ID or model is an item error. The output replays into
+`create` unchanged (inline or `items_file`); into a model that already holds the
+relationships, pass `on_conflict: "skip"` (same IDs) or `on_existing: "reuse"`
+(different IDs).
+
 ---
 
 ## ModelAccessor.java

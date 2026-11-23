@@ -8,7 +8,6 @@ import java.util.Map;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
-import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateConcept;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
@@ -46,7 +45,9 @@ public class UpdateRelationshipTool implements ITool {
                 + "preserve the relationship's ID and its connections on all "
                 + "views, but may invalidate them if the new type isn't allowed "
                 + "by the ArchiMate matrix between the existing endpoints "
-                + "(returns a warning in that case).";
+                + "(returns a warning in that case). On a type change, values the new "
+                + "type can't hold (access_type, influence_strength, directed, "
+                + "specialization) are dropped and reported in 'dropped'.";
     }
 
     @Override
@@ -73,10 +74,7 @@ public class UpdateRelationshipTool implements ITool {
                                 + "Preserves the relationship ID and view connections.");
         properties.putObject("name").put("type", "string");
         properties.putObject("documentation").put("type", "string");
-        properties.putObject("access_type").put("type", "integer")
-                .put("description",
-                        "Access type for AccessRelationship: 0=Write, 1=Read, "
-                                + "2=Access, 3=ReadWrite");
+        RelationshipAttributes.addSchema(properties);
         ObjectNode props = properties.putObject("properties");
         props.put("type", "array");
         props.put("description", "Replace custom properties with these key/value pairs");
@@ -131,12 +129,19 @@ public class UpdateRelationshipTool implements ITool {
         IArchimateRelationship target = rel;
         String warning = null;
 
+        Map<String, Object> dropped = new LinkedHashMap<>();
+
         String newType = item.has("new_type") ? item.get("new_type").asText() : null;
+        EClass eClass = null;
         if (newType != null && !newType.isBlank()) {
-            EClass eClass = ModelAccessor.resolveRelationshipClass(newType);
+            eClass = ModelAccessor.resolveRelationshipClass(newType);
             if (eClass == null) {
                 throw new Exception("Unknown relationship type: " + newType);
             }
+        }
+        // Judged against the type after new_type, before anything changes.
+        RelationshipAttributes.check(eClass != null ? eClass : rel.eClass(), item);
+        if (eClass != null) {
             if (!eClass.equals(rel.eClass())) {
                 IArchimateConcept src = rel.getSource();
                 IArchimateConcept tgt = rel.getTarget();
@@ -167,6 +172,23 @@ public class UpdateRelationshipTool implements ITool {
                 }
                 newRel.setSource(src);
                 newRel.setTarget(tgt);
+
+                // Carry over the old type's attributes where they still apply; report the rest.
+                Map<String, Object> old = new LinkedHashMap<>();
+                RelationshipAttributes.read(rel, old);
+                String spec = ModelAccessor.getSpecialization(rel);
+                if (spec != null) {
+                    old.put("specialization", spec);
+                }
+                ObjectNode carry = ToolRegistry.MAPPER.createObjectNode();
+                for (Map.Entry<String, Object> e : old.entrySet()) {
+                    if (RelationshipAttributes.appliesTo(e.getKey(), eClass)) {
+                        carry.set(e.getKey(), ToolRegistry.MAPPER.valueToTree(e.getValue()));
+                    } else {
+                        dropped.put(e.getKey(), e.getValue());
+                    }
+                }
+                RelationshipAttributes.apply(newRel, carry);
 
                 IFolder folder = (IFolder) rel.eContainer();
                 int idx = folder != null ? folder.getElements().indexOf(rel) : -1;
@@ -203,14 +225,18 @@ public class UpdateRelationshipTool implements ITool {
         if (item.has("documentation")) {
             target.setDocumentation(item.get("documentation").asText());
         }
-        if (item.has("access_type") && target instanceof IAccessRelationship) {
-            ((IAccessRelationship) target).setAccessType(item.get("access_type").asInt());
-        }
+        RelationshipAttributes.apply(target, item);
         int removed = ModelAccessor.applyProperties(target, item);
         if (item.has("properties") || item.has("remove_properties")) {
             entry.put("removed", removed);
         }
         ModelAccessor.applySpecialization(model, target, item);
+        if (item.has("specialization")) {
+            dropped.remove("specialization");
+        }
+        if (!dropped.isEmpty()) {
+            entry.put("dropped", dropped);
+        }
         if (item.has("new_folder_id")) {
             String fid = item.get("new_folder_id").asText();
             IFolder nf = ModelAccessor.findFolderById(model, fid);

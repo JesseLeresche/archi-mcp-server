@@ -45,7 +45,7 @@ uniform `{ "results": [...] }`. The 14 registered tools are:
 | `query_model` | List/filter elements by type, layer, name, or folder |
 | `get_views` | List diagram views with element/group/note counts |
 | `manage_elements` | `create` / `update` / `delete` |
-| `manage_relationships` | `create` / `update` / `delete` / `valid_types` / `between` |
+| `manage_relationships` | `create` / `update` / `delete` / `valid_types` / `between` / `query` |
 | `manage_views` | `create` / `update` / `delete` / `duplicate` |
 | `manage_view_content` | `add_figure` / `remove_figure` / `add_connection` / `update_connection` / `remove_connection` |
 | `manage_folders` | `create` / `delete` / `move_element` / `move_view` / `list_contents` / `tree` |
@@ -65,6 +65,7 @@ wrapping, so consolidated tools must **never** wrap delegate calls in their own 
 ### Important Patterns
 
 - Styling goes through `FigureStyle.apply/read/copy` (one vocabulary for figures and connections); never hand-roll setters in a tool
+- Relationship `access_type` / `influence_strength` / `directed` go through `RelationshipAttributes` (check before mutating, apply, read as names); never `asInt()` an access type in a tool
 - `ConsolidatedTool.execute` is final: subclasses implement `executeOperation`; it handles `results: "summary"`, and `normalizeItems` handles `items_file`
 - Files clients name (`items_file`, `output_file`) go through `ExchangeDir` only — never accept a path
 - All `ITool.execute()` methods return a JSON string (serialized via Jackson) and throw `Exception` on failure

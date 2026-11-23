@@ -78,7 +78,7 @@ Only four relationship types are used. Direction is fixed.
 | **Assignment** | `AssignmentRelationship` | Actor → Role or Actor → Process | Layers 1 and 3 (horizontal) |
 | **Serving** | `ServingRelationship` | Lower element → Upper element | Cross-layer vertical (upward) |
 | **Realization** | `RealizationRelationship` | Process/Component/Node → Service it fulfils | Cross-layer vertical (upward) |
-| **Access** | `AccessRelationship` accessType=`ReadWrite` | Process/Component/Node → Data object | Within-layer horizontal |
+| **Access** | `AccessRelationship` `access_type=ReadWrite` | Process/Component/Node → Data object | Within-layer horizontal |
 
 ### Canonical vertical chain
 
@@ -261,17 +261,17 @@ Before returning, confirm:
 
 ```json
 [
-  { "source": "Business Actor (ext)", "target": "Customer",              "type": "AssignmentRelationship"  },
-  { "source": "Business Service A",   "target": "Customer",              "type": "ServingRelationship"     },
-  { "source": "Business Process A",   "target": "Business Service A",    "type": "RealizationRelationship" },
-  { "source": "Business Actor (int)", "target": "Business Process A",    "type": "AssignmentRelationship"  },
-  { "source": "Business Process A",   "target": "Business Object",       "type": "AccessRelationship", "access_type": "ReadWrite" },
-  { "source": "Application Service A","target": "Business Process A",    "type": "ServingRelationship"     },
-  { "source": "Application Component A","target": "Application Service A","type": "RealizationRelationship"},
-  { "source": "Application Component A","target": "Data Object",         "type": "AccessRelationship", "access_type": "ReadWrite" },
-  { "source": "Technology Service A", "target": "Application Component A","type": "ServingRelationship"   },
-  { "source": "Platform A",           "target": "Technology Service A",  "type": "RealizationRelationship" },
-  { "source": "Platform A",           "target": "Artifact",              "type": "AccessRelationship", "access_type": "ReadWrite" }
+  { "source_id": "Business Actor (ext)", "target_id": "Customer",              "type": "AssignmentRelationship"  },
+  { "source_id": "Business Service A",   "target_id": "Customer",              "type": "ServingRelationship"     },
+  { "source_id": "Business Process A",   "target_id": "Business Service A",    "type": "RealizationRelationship" },
+  { "source_id": "Business Actor (int)", "target_id": "Business Process A",    "type": "AssignmentRelationship"  },
+  { "source_id": "Business Process A",   "target_id": "Business Object",       "type": "AccessRelationship", "access_type": "ReadWrite" },
+  { "source_id": "Application Service A","target_id": "Business Process A",    "type": "ServingRelationship"     },
+  { "source_id": "Application Component A","target_id": "Application Service A","type": "RealizationRelationship"},
+  { "source_id": "Application Component A","target_id": "Data Object",         "type": "AccessRelationship", "access_type": "ReadWrite" },
+  { "source_id": "Technology Service A", "target_id": "Application Component A","type": "ServingRelationship"   },
+  { "source_id": "Platform A",           "target_id": "Technology Service A",  "type": "RealizationRelationship" },
+  { "source_id": "Platform A",           "target_id": "Artifact",              "type": "AccessRelationship", "access_type": "ReadWrite" }
 ]
 ```
 

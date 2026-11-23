@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateConcept;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
@@ -62,19 +61,7 @@ public class GetViewDefinitionTool implements ITool {
 
     @Override
     public String execute(JsonNode args) throws Exception {
-        IArchimateModel model;
-        if (args.hasNonNull("model")) {
-            String m = args.get("model").asText();
-            model = ModelAccessor.findModel(m);
-            if (model == null) {
-                throw new Exception("Model not found: " + m);
-            }
-        } else {
-            model = ModelAccessor.getOpenModel();
-            if (model == null) {
-                throw new Exception("No model is currently open in Archi");
-            }
-        }
+        IArchimateModel model = resolveModel(args);
         String viewId = ConsolidatedTool.requireText(args, "view_id");
         IArchimateDiagramModel view = ModelAccessor.findViewById(model, viewId);
         if (view == null) {
@@ -169,13 +156,7 @@ public class GetViewDefinitionTool implements ITool {
         }
         List<Map<String, Object>> relationshipEntries = new ArrayList<>();
         for (IArchimateRelationship r : relationships) {
-            Map<String, Object> e = concept(r);
-            e.put("source_id", r.getSource().getId());
-            e.put("target_id", r.getTarget().getId());
-            if (r instanceof IAccessRelationship a) {
-                e.put("access_type", a.getAccessType());
-            }
-            relationshipEntries.add(e);
+            relationshipEntries.add(relationshipEntry(r));
         }
 
         Map<String, Object> def = new LinkedHashMap<>();
@@ -188,6 +169,32 @@ public class GetViewDefinitionTool implements ITool {
             def.put("warnings", warnings);
         }
         return def;
+    }
+
+    /** The {@code model} arg's open model (name or ID), else the selected one. */
+    static IArchimateModel resolveModel(JsonNode args) throws Exception {
+        if (args.hasNonNull("model")) {
+            String m = args.get("model").asText();
+            IArchimateModel model = ModelAccessor.findModel(m);
+            if (model == null) {
+                throw new Exception("Model not found: " + m);
+            }
+            return model;
+        }
+        IArchimateModel model = ModelAccessor.getOpenModel();
+        if (model == null) {
+            throw new Exception("No model is currently open in Archi");
+        }
+        return model;
+    }
+
+    /** A relationship in create's input form; shared with {@code manage_relationships query}. */
+    static Map<String, Object> relationshipEntry(IArchimateRelationship r) {
+        Map<String, Object> e = concept(r);
+        e.put("source_id", r.getSource().getId());
+        e.put("target_id", r.getTarget().getId());
+        RelationshipAttributes.read(r, e);
+        return e;
     }
 
     private static Map<String, Object> concept(IArchimateConcept c) {

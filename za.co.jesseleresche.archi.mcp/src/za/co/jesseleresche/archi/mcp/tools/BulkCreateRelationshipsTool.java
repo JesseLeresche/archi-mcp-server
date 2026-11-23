@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
-import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
@@ -38,7 +37,8 @@ public class BulkCreateRelationshipsTool implements ITool {
     public String getDescription() {
         return "Create multiple ArchiMate relationships in a single call. "
                 + "Returns a result entry per relationship, with per-item success or error. "
-                + "Each item may optionally specify folder_id and access_type.";
+                + "Each item may optionally specify folder_id, access_type, influence_strength, "
+                + "directed and on_existing.";
     }
 
     @Override
@@ -65,9 +65,13 @@ public class BulkCreateRelationshipsTool implements ITool {
                                 + "top-level folder name (e.g. \"Relations/Integrations\"), "
                                 + "matched case-insensitively. Missing intermediate folders are "
                                 + "created. Ignored if folder_id is also set.");
-        ObjectNode accessTypeNode = itemProps.putObject("access_type");
-        accessTypeNode.put("type", "integer");
-        accessTypeNode.put("description", "For AccessRelationship: 0=Unspecified, 1=Read, 2=Write, 3=ReadWrite");
+        RelationshipAttributes.addSchema(itemProps);
+        ObjectNode onExisting = itemProps.putObject("on_existing");
+        onExisting.put("type", "string");
+        onExisting.putArray("enum").add("reuse").add("add");
+        onExisting.put("description", "When a relationship of this type already joins source to target: "
+                + "absent = item error, \"reuse\" = return the existing one ({id, reused: true}), "
+                + "\"add\" = create another.");
         ArrayNode itemRequired = items.putArray("required");
         itemRequired.add("source_id");
         itemRequired.add("target_id");
@@ -110,7 +114,6 @@ public class BulkCreateRelationshipsTool implements ITool {
                     String name = item.has("name") ? item.get("name").asText() : null;
                     String folderId = item.has("folder_id") ? item.get("folder_id").asText() : null;
                     String folderPath = item.has("folder_path") ? item.get("folder_path").asText() : null;
-                    Integer accessTypeVal = item.has("access_type") ? item.get("access_type").asInt() : null;
 
                     IArchimateElement source = ModelAccessor.findElementById(model, sourceId);
                     if (source == null) {
@@ -147,6 +150,26 @@ public class BulkCreateRelationshipsTool implements ITool {
                         continue;
                     }
 
+                    RelationshipAttributes.check(eClass, item);
+                    String onExisting = item.hasNonNull("on_existing") ? item.get("on_existing").asText() : null;
+                    if (onExisting != null && !onExisting.equals("reuse") && !onExisting.equals("add")) {
+                        throw new Exception("on_existing must be \"reuse\" or \"add\", got " + onExisting);
+                    }
+                    if (!"add".equals(onExisting)) {
+                        IArchimateRelationship existing = findExisting(model, eClass, source, target);
+                        if (existing != null && onExisting == null) {
+                            throw new Exception("relationship " + existing.getId() + " already exists between "
+                                    + "these elements; pass on_existing: \"reuse\" or \"add\"");
+                        }
+                        if (existing != null) {
+                            entry.put("id", existing.getId());
+                            entry.put("reused", true);
+                            entry.put("folder_path", ModelAccessor.getFolderPath((IFolder) existing.eContainer()));
+                            entries.add(entry);
+                            continue;
+                        }
+                    }
+
                     EObject eObject = IArchimateFactory.eINSTANCE.create(eClass);
                     IArchimateRelationship relationship = (IArchimateRelationship) eObject;
                     if (requestedId != null) {
@@ -160,9 +183,7 @@ public class BulkCreateRelationshipsTool implements ITool {
                     if (item.hasNonNull("documentation")) {
                         relationship.setDocumentation(item.get("documentation").asText());
                     }
-                    if (accessTypeVal != null && relationship instanceof IAccessRelationship accessRel) {
-                        accessRel.setAccessType(accessTypeVal);
-                    }
+                    RelationshipAttributes.apply(relationship, item);
                     ModelAccessor.applyProperties(relationship, item);
                     ModelAccessor.applySpecialization(model, relationship, item);
 
@@ -204,5 +225,17 @@ public class BulkCreateRelationshipsTool implements ITool {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("results", results);
         return ToolRegistry.MAPPER.writeValueAsString(response);
+    }
+
+    /** First relationship in folder order of this exact type from source to target, or null. */
+    private static IArchimateRelationship findExisting(IArchimateModel model, EClass eClass,
+            IArchimateElement source, IArchimateElement target) {
+        // ponytail: linear scan per item, O(items x rels); index by (source,type) if batches get large
+        for (IArchimateRelationship r : ModelAccessor.collectAllFromFolders(model, IArchimateRelationship.class)) {
+            if (r.eClass() == eClass && r.getSource() == source && r.getTarget() == target) {
+                return r;
+            }
+        }
+        return null;
     }
 }

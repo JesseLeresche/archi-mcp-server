@@ -122,6 +122,11 @@ Quick-reference for an AI agent generating ArchiMate {View Type} Views via the A
 6. manage_appearance     set_style → ...
 ```
 
+> Relationship items use `source_id` / `target_id` / `type`. Give `access_type` as a name
+> (`Write`, `Read`, `Unspecified`, `ReadWrite`; omitted = Write) and only on Access
+> relationships. If the guide may be re-run on a model that already has the relationships,
+> say whether to pass `on_existing: "reuse"` (re-run is a no-op) or `"add"`.
+
 ---
 
 ## 8. Naming Convention
@@ -167,7 +172,7 @@ Quick-reference for an AI agent generating ArchiMate {View Type} Views via the A
 
 ```json
 [
-  { "source": "{Example Name}", "target": "{Example Name}", "type": "{RelationshipType}" }
+  { "source_id": "{Example Name}", "target_id": "{Example Name}", "type": "{RelationshipType}" }
 ]
 ```
 
