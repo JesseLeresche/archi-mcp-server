@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.archimatetool.model.IArchimateElement;
+import com.archimatetool.model.IArchimateFactory;
+import com.archimatetool.model.IProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import za.co.jesseleresche.archi.mcp.testing.TestModels;
@@ -79,5 +81,41 @@ class ManageElementsToolTest {
         } finally {
             System.clearProperty(za.co.jesseleresche.archi.mcp.util.ExchangeDir.PROPERTY);
         }
+    }
+
+    /** FR-10, FR-25: merge is in the enum and description, routed, and listed for unknown operations. */
+    @Test
+    void mergeIsRoutedAndListedInSchema() throws Exception {
+        assertTrue(tool.getInputSchema().get("properties").get("operation").get("enum").toString()
+                .contains("\"merge\""));
+        assertTrue(tool.getDescription().contains("merge"));
+        IArchimateElement s = models.element("ApplicationComponent", "CRM");
+        IArchimateElement d = models.element("ApplicationComponent", "CRM");
+        JsonNode r = run(tool, "{'operation':'merge','items':{'survivor_id':'" + s.getId()
+                + "','duplicate_ids':['" + d.getId() + "']}}").get("results");
+        assertEquals(1, r.size());
+        assertEquals(s.getId(), r.get(0).get("survivor_id").asText(), r.toString());
+        assertNull(ModelAccessor.findElementById(models.model, d.getId()));
+        assertTrue(assertThrows(Exception.class, () -> run(tool, "{'operation':'frob','items':{}}"))
+                .getMessage().contains("merge"));
+    }
+
+    /** FR-23: in the summary shape a merge blocked by conflicts counts as failed. */
+    @Test
+    void blockedMergeCountsAsFailedInSummary() throws Exception {
+        IArchimateElement s = models.element("ApplicationComponent", "CRM");
+        IArchimateElement d = models.element("ApplicationComponent", "CRM");
+        for (Object[] kv : new Object[][] {{s, "sales"}, {d, "finance"}}) {
+            IProperty p = IArchimateFactory.eINSTANCE.createProperty();
+            p.setKey("owner");
+            p.setValue((String) kv[1]);
+            ((IArchimateElement) kv[0]).getProperties().add(p);
+        }
+        JsonNode r = run(tool, "{'operation':'merge','results':'summary','items':[{'survivor_id':'" + s.getId()
+                + "','duplicate_ids':['" + d.getId() + "']}]}");
+        assertEquals(1, r.get("failed").asInt(), r.toString());
+        assertEquals("unresolved conflicts", r.get("errors").get(0).get("error").asText());
+        assertNotNull(ModelAccessor.findElementById(models.model, d.getId()));
+        assertEquals(0, models.saves);
     }
 }

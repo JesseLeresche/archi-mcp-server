@@ -295,6 +295,15 @@ public class ModelAccessor {
     }
 
     /**
+     * Every connection attached at either end to a diagram object on the view, then the
+     * connections attached to those connections, transitively. Distinct, in tree order.
+     */
+    public static java.util.Collection<com.archimatetool.model.IDiagramModelConnection> connectionsOnView(
+            IArchimateDiagramModel view) {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    /**
      * Find an existing visual connection on a view for a given relationship ID.
      * Searches all diagram objects (including groups/notes) recursively.
      * Returns null if no connection exists for this relationship.

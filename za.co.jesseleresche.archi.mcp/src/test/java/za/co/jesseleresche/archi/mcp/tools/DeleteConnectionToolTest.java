@@ -11,6 +11,7 @@ import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IDiagramModelGroup;
 
 import za.co.jesseleresche.archi.mcp.testing.TestModels;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -67,5 +68,24 @@ class DeleteConnectionToolTest {
         e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + vid + "','relationship_id':'y'}"));
         assertTrue(e.getMessage().contains("No connection found for relationship on view: y"));
         assertEquals(0, models.saves);
+    }
+
+    /** S1.10 / FR-8: a target-side ghost (detached source) can be found and removed by connection_id. */
+    @Test
+    void removesTargetSideGhostByConnectionId() throws Exception {
+        IArchimateDiagramModel view = models.view("V");
+        IArchimateElement s = models.element("ApplicationComponent", "S");
+        IArchimateElement t = models.element("ApplicationComponent", "T");
+        IDiagramModelGroup g = models.group(view, "G", 0, 0, 300, 200);
+        IDiagramModelArchimateObject fs = models.figure(g, s, 10, 30, 120, 55);
+        IDiagramModelArchimateObject ft = models.figure(view, t, 400, 0, 120, 55);
+        IDiagramModelArchimateConnection ghost = models.connection(fs, ft,
+                models.relationship("ServingRelationship", s, t));
+        view.getChildren().remove(g); // detach the source without disconnecting
+
+        run(tool, "{'view_id':'" + view.getId() + "','connection_id':'" + ghost.getId() + "'}");
+
+        assertTrue(ft.getTargetConnections().isEmpty());
+        assertEquals(1, models.saves);
     }
 }

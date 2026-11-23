@@ -4,7 +4,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.gef.commands.CommandStack;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -16,6 +25,9 @@ import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
+import com.archimatetool.model.IConnectable;
+import com.archimatetool.model.IDiagramModel;
+import com.archimatetool.model.IDiagramModelConnection;
 import com.archimatetool.model.IDiagramModelContainer;
 import com.archimatetool.model.IDiagramModelGroup;
 import com.archimatetool.model.IDiagramModelNote;
@@ -152,5 +164,59 @@ public final class TestModels implements BeforeEachCallback, AfterEachCallback {
         c.setArchimateRelationship(r);
         c.connect(source, target);
         return c;
+    }
+
+    /** Install a GEF command stack on the model (tools execute through it), for undo tests. */
+    public CommandStack commandStack() {
+        CommandStack stack = new CommandStack();
+        model.setAdapter(CommandStack.class, stack);
+        return stack;
+    }
+
+    /**
+     * Fail if any connection reachable from any view (through the source/target connections of
+     * every diagram object or connection in it, transitively) has a null end, an end outside
+     * that view, or is not itself inside that view. Deliberately independent of ModelAccessor.
+     */
+    public void assertNoDanglingConnections() {
+        List<String> problems = new ArrayList<>();
+        for (Iterator<EObject> it = model.eAllContents(); it.hasNext();) {
+            if (!(it.next() instanceof IDiagramModel view)) {
+                continue;
+            }
+            Deque<IConnectable> todo = new ArrayDeque<>();
+            view.eAllContents().forEachRemaining(o -> {
+                if (o instanceof IConnectable c) {
+                    todo.add(c);
+                }
+            });
+            Set<IDiagramModelConnection> seen = new HashSet<>();
+            while (!todo.isEmpty()) {
+                IConnectable c = todo.pop();
+                List<IDiagramModelConnection> attached = new ArrayList<>(c.getSourceConnections());
+                attached.addAll(c.getTargetConnections());
+                for (IDiagramModelConnection conn : attached) {
+                    if (!seen.add(conn)) {
+                        continue;
+                    }
+                    todo.add(conn);
+                    String id = "connection " + conn.getId() + " on view " + view.getName() + ": ";
+                    if (conn.getSource() == null) {
+                        problems.add(id + "null source");
+                    } else if (!EcoreUtil.isAncestor(view, conn.getSource())) {
+                        problems.add(id + "source not on view");
+                    }
+                    if (conn.getTarget() == null) {
+                        problems.add(id + "null target");
+                    } else if (!EcoreUtil.isAncestor(view, conn.getTarget())) {
+                        problems.add(id + "target not on view");
+                    }
+                    if (!EcoreUtil.isAncestor(view, conn)) {
+                        problems.add(id + "connection not on view");
+                    }
+                }
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(problems.isEmpty(), "dangling connections: " + problems);
     }
 }
