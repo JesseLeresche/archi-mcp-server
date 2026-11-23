@@ -13,13 +13,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
+import com.archimatetool.model.IAssociationRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelBendpoint;
+import com.archimatetool.model.IInfluenceRelationship;
 import com.archimatetool.model.IProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -194,5 +197,34 @@ class GetViewDefinitionToolTest {
             }
         }
         throw new AssertionError(key + "=" + value + " not in " + arr);
+    }
+
+    @Test
+    void relationshipEntriesUseSharedShape() throws Exception {
+        IArchimateElement data = models.element("DataObject", "Data");
+        IArchimateElement g1 = models.element("Goal", "G1");
+        IArchimateElement g2 = models.element("Goal", "G2");
+        IAccessRelationship acc = (IAccessRelationship) models.relationship("AccessRelationship", app, data);
+        acc.setAccessType(IAccessRelationship.READ_ACCESS);
+        IInfluenceRelationship inf = (IInfluenceRelationship) models.relationship("InfluenceRelationship", g1, g2);
+        inf.setStrength("+");
+        IAssociationRelationship assoc = (IAssociationRelationship) models.relationship("AssociationRelationship", app, svc);
+        assoc.setDirected(true);
+        IArchimateDiagramModel v = models.view("Shapes");
+        var fApp = models.figure(v, app, 0, 0, 120, 55);
+        models.connection(fApp, models.figure(v, data, 200, 0, 120, 55), acc);
+        models.connection(models.figure(v, g1, 0, 200, 120, 55), models.figure(v, g2, 200, 200, 120, 55), inf);
+        models.connection(fApp, models.figure(v, svc, 400, 0, 120, 55), assoc);
+
+        JsonNode rels = run(inspect, "{'operation':'definition','view_id':'" + v.getId() + "'}").get("relationships");
+        assertEquals(3, rels.size());
+        assertEquals("Read", find(rels, "id", acc.getId()).get("access_type").asText());
+        assertEquals("+", find(rels, "id", inf.getId()).get("influence_strength").asText());
+        assertTrue(find(rels, "id", assoc.getId()).get("directed").asBoolean());
+        for (JsonNode r : rels) {
+            assertFalse(r.has("views"), r.toString());
+        }
+        JsonNode plain = find(definition("").get("relationships"), "id", serves.getId());
+        assertFalse(plain.has("access_type") || plain.has("influence_strength") || plain.has("directed"), plain.toString());
     }
 }

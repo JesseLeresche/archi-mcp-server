@@ -6,13 +6,16 @@ import static za.co.jesseleresche.archi.mcp.testing.TestModels.run;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.archimatetool.model.IAccessRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateFactory;
 import com.archimatetool.model.IArchimateRelationship;
+import com.archimatetool.model.IAssociationRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelBendpoint;
+import com.archimatetool.model.IInfluenceRelationship;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import za.co.jesseleresche.archi.mcp.testing.TestModels;
@@ -84,5 +87,30 @@ class GetConnectionToolTest {
         assertTrue(e.getMessage().contains("Connection not found on view: x"));
         e = assertThrows(Exception.class, () -> run(tool, "{'view_id':'" + vid + "','relationship_id':'y'}"));
         assertTrue(e.getMessage().contains("No connection found for relationship on view: y"));
+    }
+
+    @Test
+    void reportsRelationshipAttributes() throws Exception {
+        IArchimateDiagramModel v = models.view("V");
+        IArchimateElement app = models.element("ApplicationComponent", "App");
+        IArchimateElement data = models.element("DataObject", "Data");
+        IArchimateElement g1 = models.element("Goal", "G1");
+        IArchimateElement g2 = models.element("Goal", "G2");
+        IDiagramModelArchimateObject fApp = models.figure(v, app, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fData = models.figure(v, data, 300, 0, 120, 55);
+        IAccessRelationship rw = (IAccessRelationship) models.relationship("AccessRelationship", app, data);
+        rw.setAccessType(IAccessRelationship.READ_WRITE_ACCESS);
+        models.connection(fApp, fData, rw);
+        IInfluenceRelationship inf = (IInfluenceRelationship) models.relationship("InfluenceRelationship", g1, g2);
+        inf.setStrength("+");
+        models.connection(models.figure(v, g1, 0, 200, 120, 55), models.figure(v, g2, 300, 200, 120, 55), inf);
+        IAssociationRelationship assoc = (IAssociationRelationship) models.relationship("AssociationRelationship", data, app);
+        assoc.setDirected(true);
+        models.connection(fData, fApp, assoc);
+
+        String byRel = "{'view_id':'" + v.getId() + "','relationship_id':'";
+        assertEquals("ReadWrite", run(tool, byRel + rw.getId() + "'}").get("access_type").asText());
+        assertEquals("+", run(tool, byRel + inf.getId() + "'}").get("influence_strength").asText());
+        assertTrue(run(tool, byRel + assoc.getId() + "'}").get("directed").asBoolean());
     }
 }
