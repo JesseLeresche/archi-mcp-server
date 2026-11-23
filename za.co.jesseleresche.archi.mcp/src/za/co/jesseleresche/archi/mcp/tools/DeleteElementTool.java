@@ -2,22 +2,22 @@ package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 
+import za.co.jesseleresche.archi.mcp.util.ConnectableRemoval;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
-import com.archimatetool.model.IDiagramModelArchimateObject;
-import com.archimatetool.model.IDiagramModelConnection;
-import com.archimatetool.model.IDiagramModelContainer;
+import com.archimatetool.model.IConnectable;
 import com.archimatetool.model.IFolder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -89,25 +89,29 @@ public class DeleteElementTool implements ITool {
             }
         }
 
-        // Collect all views and find affected figures/connections
-        List<IArchimateDiagramModel> views = ModelAccessor.getAllViews(model);
-        List<String> affectedViewIds = new ArrayList<>();
+        // Every figure of the element on every view, plus every drawing of its relationships;
+        // the removal takes each subtree and every attached connection with it.
+        List<IConnectable> removed = new ArrayList<>();
+        Set<String> affectedViewIds = new LinkedHashSet<>();
         int figureCount = 0;
-        int connectionCount = 0;
-        for (IArchimateDiagramModel view : views) {
-            IDiagramModelArchimateObject fig = ModelAccessor.findFigureByElementId(view, elementId);
-            if (fig != null) {
+        for (IArchimateDiagramModel view : ModelAccessor.getAllViews(model)) {
+            List<IConnectable> onView = new ArrayList<>(ModelAccessor.findAllFiguresByElementId(view, elementId));
+            figureCount += onView.size();
+            for (IArchimateRelationship rel : relationships) {
+                onView.addAll(ModelAccessor.findConnectionsByRelationshipId(view, rel.getId()));
+            }
+            if (!onView.isEmpty()) {
                 affectedViewIds.add(view.getId());
-                figureCount++;
-                connectionCount += fig.getSourceConnections().size() + fig.getTargetConnections().size();
+                removed.addAll(onView);
             }
         }
+        ConnectableRemoval removal = new ConnectableRemoval(removed);
 
         if (dryRun) {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("relationships_to_delete", relationships.size());
             result.put("figures_to_remove", figureCount);
-            result.put("connections_to_remove", connectionCount);
+            result.put("connections_to_remove", removal.connectionCount());
             result.put("affected_view_ids", affectedViewIds);
             return ToolRegistry.MAPPER.writeValueAsString(result);
         }
@@ -125,46 +129,12 @@ public class DeleteElementTool implements ITool {
                 relState.add(new Object[]{rel, f, f.getElements().indexOf(rel)});
             }
 
-            // Capture figure state (parent container, index, connections) for undo
-            final List<Object[]> figState = new ArrayList<>();
-            for (IArchimateDiagramModel view : views) {
-                IDiagramModelArchimateObject fig = ModelAccessor.findFigureByElementId(view, elementId);
-                if (fig != null) {
-                    EObject container = fig.eContainer();
-                    int idx = -1;
-                    if (container instanceof IDiagramModelContainer dmc) {
-                        idx = dmc.getChildren().indexOf(fig);
-                    }
-                    // Capture connections (source and target) with their endpoints
-                    List<Object[]> connState = new ArrayList<>();
-                    for (IDiagramModelConnection conn : new ArrayList<>(fig.getSourceConnections())) {
-                        connState.add(new Object[]{conn, conn.getSource(), conn.getTarget()});
-                    }
-                    for (IDiagramModelConnection conn : new ArrayList<>(fig.getTargetConnections())) {
-                        connState.add(new Object[]{conn, conn.getSource(), conn.getTarget()});
-                    }
-                    figState.add(new Object[]{fig, container, idx, connState});
-                }
-            }
-
             CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
 
             Command cmd = new Command("Delete Element") {
                 @Override
                 public void execute() {
-                    for (IArchimateDiagramModel view : views) {
-                        IDiagramModelArchimateObject fig = ModelAccessor.findFigureByElementId(view, elementId);
-                        if (fig != null) {
-                            List<IDiagramModelConnection> conns = new ArrayList<>(fig.getSourceConnections());
-                            conns.addAll(fig.getTargetConnections());
-                            for (IDiagramModelConnection conn : conns) {
-                                conn.disconnect();
-                            }
-                            if (fig.eContainer() instanceof IDiagramModelContainer dmc) {
-                                dmc.getChildren().remove(fig);
-                            }
-                        }
-                    }
+                    removal.execute();
                     for (IArchimateRelationship rel : relationships) {
                         if (rel.eContainer() instanceof IFolder f) {
                             f.getElements().remove(rel);
@@ -174,32 +144,16 @@ public class DeleteElementTool implements ITool {
                 }
 
                 @Override
-                @SuppressWarnings("unchecked")
                 public void undo() {
-                    // Re-add element
                     elementFolder.getElements().add(
                             Math.min(elementIndex, elementFolder.getElements().size()), element);
-                    // Re-add relationships
                     for (Object[] state : relState) {
                         IArchimateRelationship rel = (IArchimateRelationship) state[0];
                         IFolder f = (IFolder) state[1];
                         int idx = (int) state[2];
                         f.getElements().add(Math.min(idx, f.getElements().size()), rel);
                     }
-                    // Re-add figures and reconnect connections
-                    for (Object[] state : figState) {
-                        IDiagramModelArchimateObject fig = (IDiagramModelArchimateObject) state[0];
-                        EObject container = (EObject) state[1];
-                        int idx = (int) state[2];
-                        if (container instanceof IDiagramModelContainer dmc) {
-                            dmc.getChildren().add(Math.min(idx, dmc.getChildren().size()), fig);
-                        }
-                        List<Object[]> connStates = (List<Object[]>) state[3];
-                        for (Object[] cs : connStates) {
-                            IDiagramModelConnection conn = (IDiagramModelConnection) cs[0];
-                            conn.reconnect();
-                        }
-                    }
+                    removal.undo();
                 }
             };
 

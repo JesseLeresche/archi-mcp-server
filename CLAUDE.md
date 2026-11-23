@@ -44,7 +44,7 @@ uniform `{ "results": [...] }`. The 14 registered tools are:
 | `manage_models` | `list` / `select` |
 | `query_model` | List/filter elements by type, layer, name, or folder |
 | `get_views` | List diagram views with element/group/note counts |
-| `manage_elements` | `create` / `update` / `delete` |
+| `manage_elements` | `create` / `update` / `delete` / `merge` |
 | `manage_relationships` | `create` / `update` / `delete` / `valid_types` / `between` / `query` |
 | `manage_views` | `create` / `update` / `delete` / `duplicate` |
 | `manage_view_content` | `add_figure` / `remove_figure` / `add_connection` / `update_connection` / `remove_connection` |
@@ -52,7 +52,7 @@ uniform `{ "results": [...] }`. The 14 registered tools are:
 | `manage_appearance` | `set_style` / `layout_view` |
 | `inspect_view` | `layout` / `connections` / `get_connection` / `definition` (read-only) |
 | `get_element_analysis` | Inspect an element's relationships, view usage, properties |
-| `validate_model` | Validate relationships against the ArchiMate spec |
+| `validate_model` | Validate relationships against the ArchiMate spec; always lists `dangling_connections` |
 | `export_view_as_image` | Export a view as a PNG (inline + optional disk save) |
 | `create_sd_overview_view` | Build a complete BIAN SD Overview view atomically |
 
@@ -71,7 +71,8 @@ wrapping, so consolidated tools must **never** wrap delegate calls in their own 
 - All `ITool.execute()` methods return a JSON string (serialized via Jackson) and throw `Exception` on failure
 - Consolidated `manage_*` tools delegate to per-operation tool classes; do not reimplement model logic in them
 - Element/relationship type resolution is case-insensitive against `IArchimatePackage.eINSTANCE`
-- Visual connections use `connection.connect(source, target)` — never manually add to `view.getChildren()`
+- Visual connections use `connection.connect(source, target)` — never manually add to `view.getChildren()`. Note `connect`/`reconnect` re-sync the relationship's source/target to the figures' elements
+- Removing figures or connections goes through `util/ConnectableRemoval` (subtree + every attached connection, undoable); never `EcoreUtil.delete`
 - `ModelAccessor.getOpenModel()` returns the first open model or `null`
 - Save after every mutation via `ModelAccessor.saveModel(model)` (never `IEditorModelManager` directly — tests swap the model source)
 

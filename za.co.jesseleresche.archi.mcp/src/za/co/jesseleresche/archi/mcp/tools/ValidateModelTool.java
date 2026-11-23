@@ -14,6 +14,9 @@ import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateElement;
 import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimateRelationship;
+import com.archimatetool.model.IConnectable;
+import com.archimatetool.model.IDiagramModelArchimateConnection;
+import com.archimatetool.model.IDiagramModelConnection;
 import com.archimatetool.model.IProperty;
 import com.archimatetool.model.util.ArchimateModelUtils;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -40,7 +43,11 @@ public class ValidateModelTool implements ITool {
                 + "Optionally also checks project-specific conventions (opt-in, since these "
                 + "aren't part of the ArchiMate spec): require_properties (element property "
                 + "keys that must be present), check_orphans (elements not used in any view), "
-                + "and property_vocabularies (allowed values per property key).";
+                + "and property_vocabularies (allowed values per property key). "
+                + "Always lists dangling_connections: view connections with a missing end, an end "
+                + "detached or on another view, or that are themselves detached (ghosts left by "
+                + "earlier edits), as {view_id, view_name, connection_id, relationship_id, problems}; "
+                + "remove each with manage_view_content remove_connection by connection_id.";
     }
 
     @Override
@@ -117,6 +124,7 @@ public class ValidateModelTool implements ITool {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total_relationships", allRels.size());
         result.put("violations", violations);
+        result.put("dangling_connections", danglingConnections(model));
 
         List<String> requiredKeys = new ArrayList<>();
         if (args != null && args.has("require_properties") && args.get("require_properties").isArray()) {
@@ -214,5 +222,48 @@ public class ValidateModelTool implements ITool {
         }
 
         return ToolRegistry.MAPPER.writeValueAsString(result);
+    }
+
+    /** Every dangling connection reachable from any view, once, under the view it was first found from. */
+    private static List<ObjectNode> danglingConnections(IArchimateModel model) {
+        List<ObjectNode> out = new ArrayList<>();
+        Set<IDiagramModelConnection> seen = new HashSet<>();
+        for (IArchimateDiagramModel view : ModelAccessor.getAllViews(model)) {
+            for (IDiagramModelConnection k : ModelAccessor.connectionsOnView(view)) {
+                if (!seen.add(k)) {
+                    continue;
+                }
+                List<String> problems = new ArrayList<>();
+                endProblems(view, k.getSource(), "source", problems);
+                endProblems(view, k.getTarget(), "target", problems);
+                if (k.getDiagramModel() != view) {
+                    problems.add("connection_detached");
+                }
+                if (problems.isEmpty()) {
+                    continue;
+                }
+                // ObjectNode, not a Map: the shared mapper drops null map values, and relationship_id
+                // is an explicit null for non-ArchiMate connections.
+                ObjectNode entry = ToolRegistry.MAPPER.createObjectNode();
+                entry.put("view_id", view.getId());
+                entry.put("view_name", view.getName());
+                entry.put("connection_id", k.getId());
+                entry.put("relationship_id", k instanceof IDiagramModelArchimateConnection c
+                        && c.getArchimateRelationship() != null ? c.getArchimateRelationship().getId() : null);
+                problems.forEach(entry.putArray("problems")::add);
+                out.add(entry);
+            }
+        }
+        return out;
+    }
+
+    private static void endProblems(IArchimateDiagramModel view, IConnectable end, String side, List<String> problems) {
+        if (end == null) {
+            problems.add(side + "_missing");
+        } else if (end.getDiagramModel() == null) {
+            problems.add(side + "_detached");
+        } else if (end.getDiagramModel() != view) {
+            problems.add(side + "_other_view");
+        }
     }
 }

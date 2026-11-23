@@ -483,6 +483,7 @@ class MergeElementsToolTest {
         IDiagramModelArchimateObject fy = models.figure(w, y, 400, 0, 120, 55);
         IDiagramModelArchimateConnection k5 = models.connection(fs, fy, r5);
         IDiagramModelArchimateConnection k6 = models.connection(fs, fy, r6); // inconsistent on purpose
+        r6.setSource(d); // connect() re-syncs r6's ends to S; restore D so r6 is drawn from S's figure (FR-21 drop rule)
 
         JsonNode r = merge(s, d, "'collapse':true");
 

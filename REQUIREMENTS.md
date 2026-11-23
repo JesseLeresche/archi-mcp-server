@@ -603,6 +603,50 @@ each once). With `output_file`, the bare entry array is written to the exchange 
 relationships, pass `on_conflict: "skip"` (same IDs) or `on_existing: "reuse"`
 (different IDs).
 
+**Figure removal leaves no dangling connections** (spec
+`docs/specs/figure-removal-dangling-connections/`). `manage_elements delete` removes
+**every** figure of the element on every view (nested, and several on one view);
+`remove_figure` removes its figure. Either way the whole subtree leaves the view together
+with every connection attached at either end to any figure in it, and, transitively, every
+connection attached to a removed connection. Each is a single undo step that restores
+figures (same parent and index) and connections (both ends). Delete's `dry_run` reports
+true counts: `figures_to_remove` (figures, not views), `connections_to_remove` (distinct
+connections), `affected_view_ids` (each once); `figures_removed` is a true count. Lookups by
+`connection_id` / `relationship_id` find a connection attached at either end to the view, so
+a ghost whose source was detached can be removed with `remove_connection`.
+
+**`manage_elements merge`**: item `{survivor_id, duplicate_ids: [id,...], collapse?: false,
+resolve?, dry_run?}`, one undo step per item. Missing/non-element IDs, an empty or repeated
+`duplicate_ids`, the survivor listed as a duplicate, or a duplicate of another type is an
+item error. Relationships touching a duplicate are re-pointed to the survivor (IDs, type,
+properties, folder kept); those that would become survivor self-loops are deleted with all
+their connections. Every duplicate figure is retargeted in place (same ID, bounds, parent,
+children, style, connections). The survivor keeps its name, folder and specialisation;
+differing duplicate names are listed in `duplicate_names`. The diff, like git:
+`conflicts` holds `{property, survivor: [values], duplicates: {id: [values]}}` (repeated
+keys compared as ordered lists) and `{documentation: {survivor, id: text}}`; values only
+one side has fill in. Unresolved conflicts block the item, which returns
+`{error: "unresolved conflicts", conflicts, parallel_relationships}` and changes nothing;
+re-send with `resolve: {properties: {key: value|[values]}, documentation, relationships:
+{<kept id>: {properties, documentation, name}}}`. A `resolve` entry matching no conflict
+is an error that carries the current diff. `parallel_relationships: [{kept, parallel}]`
+lists relationships left with the same type, ends and type attributes (kept: the one not
+re-pointed, else the first duplicate's, else model order); `collapse: true` merges each
+group into the kept one (relationship names join the diff), moves its connections (same
+objects) or drops a connection that would double an existing one, and re-points
+relationships on collapsed relationships. Result: `{survivor_id, merged,
+relationships_repointed, relationships_deleted, relationships_collapsed, connections_moved,
+connections_removed, figures_retargeted, affected_view_ids, parallel_relationships,
+duplicate_names}`; `dry_run` adds `dry_run: true` and `conflicts`, never blocks and never
+saves.
+
+**`validate_model dangling_connections`** (always returned): every connection reachable
+from a view with a missing end, an end detached or on another view, or that is itself
+detached, once, as `{view_id, view_name, connection_id, relationship_id|null, problems}`
+with problems from `source_missing`, `target_missing`, `source_detached`,
+`target_detached`, `source_other_view`, `target_other_view`, `connection_detached`. Each
+can be removed with `remove_connection` by `connection_id`.
+
 ---
 
 ## ModelAccessor.java

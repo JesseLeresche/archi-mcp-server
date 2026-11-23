@@ -2,6 +2,9 @@ package za.co.jesseleresche.archi.mcp.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.List;
 
 import org.eclipse.emf.ecore.EClass;
@@ -13,7 +16,9 @@ import com.archimatetool.model.IArchimateModel;
 import com.archimatetool.model.IArchimatePackage;
 import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IArchimateDiagramModel;
+import com.archimatetool.model.IConnectable;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
+import com.archimatetool.model.IDiagramModelConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelContainer;
 import com.archimatetool.model.IDiagramModelObject;
@@ -314,43 +319,69 @@ public class ModelAccessor {
     /**
      * Every connection attached at either end to a diagram object on the view, then the
      * connections attached to those connections, transitively. Distinct, in tree order.
+     * Either-end, so a connection whose source was detached (a target-side ghost) is included.
      */
-    public static java.util.Collection<com.archimatetool.model.IDiagramModelConnection> connectionsOnView(
-            IArchimateDiagramModel view) {
-        throw new UnsupportedOperationException("not implemented");
+    public static Collection<IDiagramModelConnection> connectionsOnView(IArchimateDiagramModel view) {
+        return attachedConnections(collectAllDiagramObjects(view));
     }
 
     /**
-     * Find an existing visual connection on a view for a given relationship ID.
-     * Searches all diagram objects (including groups/notes) recursively.
-     * Returns null if no connection exists for this relationship.
+     * The seeds that are connections, plus every connection attached at either end to a seed,
+     * then to those connections, transitively. Distinct, breadth-first from the seeds' order.
      */
-    public static IDiagramModelArchimateConnection findConnectionByRelationshipId(
-            IArchimateDiagramModel view, String relationshipId) {
-        for (var dmo : collectAllDiagramObjects(view)) {
-            for (var conn : dmo.getSourceConnections()) {
-                if (conn instanceof IDiagramModelArchimateConnection c
-                        && relationshipId.equals(c.getArchimateRelationship().getId())) {
-                    return c;
+    public static Set<IDiagramModelConnection> attachedConnections(Collection<? extends IConnectable> seeds) {
+        Set<IDiagramModelConnection> out = new LinkedHashSet<>();
+        List<IConnectable> todo = new ArrayList<>(seeds);
+        for (IConnectable seed : seeds) {
+            if (seed instanceof IDiagramModelConnection k) {
+                out.add(k);
+            }
+        }
+        for (int i = 0; i < todo.size(); i++) {
+            IConnectable c = todo.get(i);
+            List<IDiagramModelConnection> attached = new ArrayList<>(c.getSourceConnections());
+            attached.addAll(c.getTargetConnections());
+            for (IDiagramModelConnection k : attached) {
+                if (out.add(k)) {
+                    todo.add(k);
                 }
             }
         }
-        return null;
+        return out;
+    }
+
+    /** Every connection on the view (see {@link #connectionsOnView}) drawing the relationship. */
+    public static List<IDiagramModelArchimateConnection> findConnectionsByRelationshipId(
+            IArchimateDiagramModel view, String relationshipId) {
+        List<IDiagramModelArchimateConnection> out = new ArrayList<>();
+        for (IDiagramModelConnection k : connectionsOnView(view)) {
+            if (k instanceof IDiagramModelArchimateConnection c
+                    && relationshipId.equals(c.getArchimateRelationship().getId())) {
+                out.add(c);
+            }
+        }
+        return out;
     }
 
     /**
-     * Find a visual connection on a view by its own connection ID.
-     * Searches all diagram objects (including groups/notes) recursively.
-     * Returns null if not found.
+     * Find an existing visual connection on a view for a given relationship ID: the first
+     * match in {@link #connectionsOnView} order. Returns null if none.
+     */
+    public static IDiagramModelArchimateConnection findConnectionByRelationshipId(
+            IArchimateDiagramModel view, String relationshipId) {
+        List<IDiagramModelArchimateConnection> all = findConnectionsByRelationshipId(view, relationshipId);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * Find a visual connection on a view by its own connection ID, attached at either end to
+     * the view (see {@link #connectionsOnView}). Returns null if not found.
      */
     public static IDiagramModelArchimateConnection findConnectionById(
             IArchimateDiagramModel view, String connectionId) {
-        for (var dmo : collectAllDiagramObjects(view)) {
-            for (var conn : dmo.getSourceConnections()) {
-                if (conn instanceof IDiagramModelArchimateConnection c
-                        && connectionId.equals(c.getId())) {
-                    return c;
-                }
+        for (IDiagramModelConnection k : connectionsOnView(view)) {
+            if (k instanceof IDiagramModelArchimateConnection c && connectionId.equals(c.getId())) {
+                return c;
             }
         }
         return null;
