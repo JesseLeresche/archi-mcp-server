@@ -12,6 +12,8 @@ import com.archimatetool.model.IArchimateRelationship;
 import com.archimatetool.model.IDiagramModelArchimateConnection;
 import com.archimatetool.model.IDiagramModelArchimateObject;
 import com.archimatetool.model.IDiagramModelGroup;
+import com.archimatetool.model.IArchimateFactory;
+import com.archimatetool.model.IDiagramModelConnection;
 
 import za.co.jesseleresche.archi.mcp.testing.TestModels;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
@@ -110,5 +112,30 @@ class DeleteConnectionToolTest {
                 "pass connection_id");
         assertEquals(2, ModelAccessor.findConnectionsByRelationshipId(v, rel.getId()).size());
         assertEquals(0, models.saves);
+    }
+
+    /** Review fix: a null-end ghost and a non-ArchiMate ghost are removed by connection_id, leaving none. */
+    @Test
+    void removesNullEndAndNonArchimateGhostsByConnectionId() throws Exception {
+        setUp();
+        IDiagramModelArchimateObject fb = (IDiagramModelArchimateObject) c.getTarget();
+        fb.getTargetConnections().remove(c);
+        c.setTarget(null); // null-target ghost: disconnect() is a no-op for it
+
+        IArchimateElement x = models.element("ApplicationComponent", "X");
+        IDiagramModelGroup g = models.group(v, "G", 0, 300, 300, 200);
+        IDiagramModelArchimateObject fx = models.figure(g, x, 10, 30, 120, 55);
+        IDiagramModelConnection line = IArchimateFactory.eINSTANCE.createDiagramModelConnection();
+        line.connect(fa, fx);
+        v.getChildren().remove(g); // non-ArchiMate line to a detached figure
+
+        assertEquals(2, run(new ValidateModelTool(), "{}").get("dangling_connections").size());
+        run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + c.getId() + "'}");
+        run(tool, "{'view_id':'" + v.getId() + "','connection_id':'" + line.getId() + "'}");
+
+        assertTrue(fa.getSourceConnections().isEmpty(), fa.getSourceConnections().toString());
+        assertTrue(fx.getTargetConnections().isEmpty());
+        assertEquals(0, run(new ValidateModelTool(), "{}").get("dangling_connections").size());
+        models.assertNoDanglingConnections();
     }
 }

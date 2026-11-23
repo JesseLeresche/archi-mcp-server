@@ -658,6 +658,82 @@ class MergeElementsToolTest {
         assertFalse(exists(d));
     }
 
+    // --- review fixes
+
+    /** A relationship from a duplicate to a collapsed relationship ends at the survivor and the kept one. */
+    @Test
+    void duplicateToCollapsedRelationshipEndsAtKept() throws Exception {
+        IArchimateElement s = comp("S"), d = comp("D"), y = comp("Y");
+        IArchimateRelationship r5 = models.relationship("ServingRelationship", s, y);
+        IArchimateRelationship r6 = models.relationship("ServingRelationship", d, y);
+        IArchimateRelationship rx = IArchimateFactory.eINSTANCE.createAssociationRelationship();
+        rx.connect(d, r6);
+        models.model.getDefaultFolderForObject(rx).getElements().add(rx);
+
+        JsonNode r = merge(s, d, "'collapse':true");
+
+        assertFalse(r.has("error"), r.toString());
+        assertFalse(exists(r6));
+        assertSame(s, rx.getSource());
+        assertSame(r5, rx.getTarget());
+    }
+
+    /** FR-19: merge never touches relationships it did not re-point; pre-existing parallels stay. */
+    @Test
+    void preExistingParallelsUntouchedByCollapse() throws Exception {
+        IArchimateElement s = comp("S"), d = comp("D"), y = comp("Y");
+        IArchimateRelationship r5 = models.relationship("ServingRelationship", s, y);
+        IArchimateRelationship r7 = models.relationship("ServingRelationship", s, y);
+        IArchimateRelationship r6 = models.relationship("ServingRelationship", d, y);
+
+        JsonNode r = merge(s, d, "'collapse':true");
+
+        assertFalse(r.has("error"), r.toString());
+        assertEquals(json("[{'kept':'" + r5.getId() + "','parallel':['" + r6.getId() + "']}]"),
+                r.get("parallel_relationships"));
+        assertEquals(List.of(r6.getId()), texts(r.get("relationships_collapsed")));
+        assertFalse(exists(r6));
+        assertTrue(exists(r5) && exists(r7));
+    }
+
+    /** Undo is exact even for an inconsistent drawing (S2.12 fixture). */
+    @Test
+    void undoExactForInconsistentDrawing() throws Exception {
+        CommandStack stack = models.commandStack();
+        IArchimateElement s = comp("S"), d = comp("D"), y = comp("Y");
+        IArchimateRelationship r5 = models.relationship("ServingRelationship", s, y);
+        IArchimateRelationship r6 = models.relationship("ServingRelationship", d, y);
+        IArchimateDiagramModel w = models.view("W");
+        IDiagramModelArchimateObject fs = models.figure(w, s, 0, 0, 120, 55);
+        IDiagramModelArchimateObject fy = models.figure(w, y, 400, 0, 120, 55);
+        IDiagramModelArchimateConnection k5 = models.connection(fs, fy, r5);
+        IDiagramModelArchimateConnection k6 = models.connection(fs, fy, r6);
+        r6.setSource(d); // connect() re-syncs ends; restore D (inconsistent drawing on purpose)
+
+        JsonNode r = merge(s, d, "'collapse':true");
+        assertFalse(r.has("error"), r.toString());
+        stack.undo();
+
+        assertSame(d, r6.getSource());
+        assertSame(y, r6.getTarget());
+        assertSame(r6, k6.getArchimateRelationship());
+        assertTrue(fs.getSourceConnections().containsAll(List.of(k5, k6)));
+        assertTrue(fy.getTargetConnections().containsAll(List.of(k5, k6)));
+    }
+
+    /** Diff.resolve rejects non-text values for documentation/name. */
+    @Test
+    void resolveRejectsNonTextValues() {
+        IArchimateElement s = comp("S"), d = comp("D");
+        s.setDocumentation("a");
+        d.setDocumentation("b");
+        Exception e = assertThrows(Exception.class, () -> merge(s, d, "'resolve':{'documentation':{'x':1}}"));
+        assertTrue(e.getMessage().contains("documentation"), e.getMessage());
+        assertThrows(Exception.class, () -> merge(s, d, "'resolve':{'documentation':null}"));
+        assertTrue(exists(d));
+        assertEquals(0, models.saves);
+    }
+
     void assertError(String item, String mentioned) {
         Exception e = assertThrows(Exception.class, () -> run(tool, item), item);
         assertTrue(e.getMessage() != null && e.getMessage().contains(mentioned),

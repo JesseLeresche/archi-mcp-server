@@ -1,17 +1,18 @@
 package za.co.jesseleresche.archi.mcp.tools;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.commands.CommandStack;
 
+import za.co.jesseleresche.archi.mcp.util.ConnectableRemoval;
 import za.co.jesseleresche.archi.mcp.util.ModelAccessor;
 import za.co.jesseleresche.archi.mcp.util.UiThreadUtil;
 import com.archimatetool.model.IArchimateDiagramModel;
 import com.archimatetool.model.IArchimateModel;
-import com.archimatetool.model.IDiagramModelArchimateConnection;
-import com.archimatetool.model.IDiagramModelObject;
+import com.archimatetool.model.IDiagramModelConnection;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -84,9 +85,9 @@ public class DeleteConnectionTool implements ITool {
             throw new Exception("View not found: " + viewId);
         }
 
-        IDiagramModelArchimateConnection connection;
+        IDiagramModelConnection connection;
         if (connectionId != null) {
-            connection = ModelAccessor.findConnectionById(view, connectionId);
+            connection = ModelAccessor.findAnyConnectionById(view, connectionId);
             if (connection == null) {
                 throw new Exception("Connection not found on view: " + connectionId);
             }
@@ -97,25 +98,21 @@ public class DeleteConnectionTool implements ITool {
             }
         }
 
-        IDiagramModelArchimateConnection conn = connection;
+        // Also takes connections attached to this one, and copes with null-end ghosts.
+        ConnectableRemoval removal = new ConnectableRemoval(List.of(connection));
 
         Map<String, Object> result = UiThreadUtil.syncExec(() -> {
-            final IDiagramModelObject[] sourceHolder =
-                    {(IDiagramModelObject) conn.getSource()};
-            final IDiagramModelObject[] targetHolder =
-                    {(IDiagramModelObject) conn.getTarget()};
-
             CommandStack stack = (CommandStack) model.getAdapter(CommandStack.class);
 
             Command cmd = new Command("Delete Connection") {
                 @Override
                 public void execute() {
-                    conn.disconnect();
+                    removal.execute();
                 }
 
                 @Override
                 public void undo() {
-                    conn.connect(sourceHolder[0], targetHolder[0]);
+                    removal.undo();
                 }
             };
 

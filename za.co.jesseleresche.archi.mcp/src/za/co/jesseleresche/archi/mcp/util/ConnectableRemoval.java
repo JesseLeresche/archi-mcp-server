@@ -50,13 +50,16 @@ public final class ConnectableRemoval {
         return connections.size();
     }
 
-    /** Top-level diagram objects this removal takes out (nested ones leave with them). */
-    public int rootCount() {
-        return roots.size();
-    }
-
     public void execute() {
-        connections.forEach(IDiagramModelConnection::disconnect);
+        // Detach each non-null end directly: disconnect() is a no-op when either end is null.
+        for (IDiagramModelConnection k : connections) {
+            if (k.getSource() != null) {
+                k.getSource().removeConnection(k);
+            }
+            if (k.getTarget() != null) {
+                k.getTarget().removeConnection(k);
+            }
+        }
         parents.clear();
         indexes.clear();
         for (IDiagramModelObject r : roots) {
@@ -71,9 +74,17 @@ public final class ConnectableRemoval {
         for (int i = roots.size() - 1; i >= 0; i--) {
             parents.get(i).getChildren().add(indexes.get(i), roots.get(i));
         }
-        // disconnect() keeps source/target, so reconnect() re-attaches both ends.
+        // addConnection, not reconnect(): reconnect() is a no-op with a null end and re-syncs the
+        // relationship's ends to the figures' elements.
         // ponytail: re-attached connections go to the end of their source/target lists; record
         // indexes if list order ever matters.
-        connections.forEach(IDiagramModelConnection::reconnect);
+        for (IDiagramModelConnection k : connections) {
+            if (k.getSource() != null) {
+                k.getSource().addConnection(k);
+            }
+            if (k.getTarget() != null) {
+                k.getTarget().addConnection(k);
+            }
+        }
     }
 }

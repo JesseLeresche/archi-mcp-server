@@ -379,9 +379,14 @@ public class ModelAccessor {
      */
     public static IDiagramModelArchimateConnection findConnectionById(
             IArchimateDiagramModel view, String connectionId) {
+        return findAnyConnectionById(view, connectionId) instanceof IDiagramModelArchimateConnection c ? c : null;
+    }
+
+    /** Like {@link #findConnectionById}, but also finds non-ArchiMate connections (plain lines). */
+    public static IDiagramModelConnection findAnyConnectionById(IArchimateDiagramModel view, String connectionId) {
         for (IDiagramModelConnection k : connectionsOnView(view)) {
-            if (k instanceof IDiagramModelArchimateConnection c && connectionId.equals(c.getId())) {
-                return c;
+            if (connectionId.equals(k.getId())) {
+                return k;
             }
         }
         return null;

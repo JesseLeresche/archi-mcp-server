@@ -125,28 +125,28 @@ public class MergeElementsTool implements ITool {
             }
         }
 
-        // Parallel groups (FR-19), keyed by type, post-merge ends and type-specific attributes.
-        Map<List<Object>, List<IArchimateRelationship>> buckets = new LinkedHashMap<>();
-        for (IArchimateRelationship rel : rels) {
-            if (selfLoops.contains(rel)) {
-                continue;
+        // Parallel groups (FR-19). With collapse, relationships on collapsed relationships are
+        // re-pointed too, so regroup once with the final ends (collapsed -> kept).
+        // ponytail: one regroup covers one level of relationship-on-relationship nesting.
+        Map<IArchimateRelationship, IArchimateRelationship> keptOf = new LinkedHashMap<>(); // collapsed -> kept
+        java.util.function.UnaryOperator<IArchimateConcept> fin = e -> {
+            IArchimateConcept a = after(e, dupSet, survivor);
+            IArchimateRelationship k = keptOf.get(a);
+            return k != null ? k : a;
+        };
+        Map<IArchimateRelationship, List<IArchimateRelationship>> groups =
+                groups(rels, selfLoops, new HashSet<>(repoint), fin, dups);
+        if (collapse) {
+            groups.forEach((kept, parallel) -> parallel.forEach(r -> keptOf.put(r, kept)));
+            Set<IArchimateRelationship> touched = new HashSet<>(repoint);
+            for (IArchimateRelationship rel : rels) {
+                if (keptOf.containsKey(rel.getSource()) || keptOf.containsKey(rel.getTarget())) {
+                    touched.add(rel);
+                }
             }
-            Map<String, Object> attrs = new HashMap<>();
-            RelationshipAttributes.read(rel, attrs);
-            buckets.computeIfAbsent(Arrays.asList(rel.eClass(), after(rel.getSource(), dupSet, survivor),
-                    after(rel.getTarget(), dupSet, survivor), attrs), k -> new ArrayList<>()).add(rel);
-        }
-        Map<IArchimateRelationship, List<IArchimateRelationship>> groups = new LinkedHashMap<>();
-        for (List<IArchimateRelationship> bucket : buckets.values()) {
-            if (bucket.size() < 2 || bucket.stream().noneMatch(repoint::contains)) {
-                continue;
-            }
-            List<IArchimateRelationship> byKeep = new ArrayList<>(bucket); // stable: ties stay in model order
-            byKeep.sort(java.util.Comparator.comparingInt(r -> repoint.contains(r) ? dupRank(r, dups) : -1));
-            IArchimateRelationship kept = byKeep.get(0);
-            List<IArchimateRelationship> parallel = new ArrayList<>(bucket);
-            parallel.remove(kept);
-            groups.put(kept, parallel);
+            groups = groups(rels, selfLoops, touched, fin, dups);
+            keptOf.clear();
+            groups.forEach((kept, parallel) -> parallel.forEach(r -> keptOf.put(r, kept)));
         }
         ArrayNode parallelJson = ToolRegistry.MAPPER.createArrayNode();
         groups.forEach((kept, parallel) -> {
@@ -159,12 +159,9 @@ public class MergeElementsTool implements ITool {
         ArrayNode conflicts = ToolRegistry.MAPPER.createArrayNode();
         Diff elementDiff = new Diff(survivor, dups, false, null, conflicts);
         Map<String, Diff> relDiffs = new LinkedHashMap<>();
-        Map<IArchimateRelationship, IArchimateRelationship> keptOf = new LinkedHashMap<>(); // collapsed -> kept
         if (collapse) {
-            groups.forEach((kept, parallel) -> {
-                relDiffs.put(kept.getId(), new Diff(kept, parallel, true, kept.getId(), conflicts));
-                parallel.forEach(r -> keptOf.put(r, kept));
-            });
+            groups.forEach((kept, parallel) -> relDiffs.put(kept.getId(),
+                    new Diff(kept, parallel, true, kept.getId(), conflicts)));
         }
 
         // Resolve (FR-17): strict, and a stale entry returns the current diff.
@@ -234,7 +231,6 @@ public class MergeElementsTool implements ITool {
         ConnectableRemoval removal = new ConnectableRemoval(removedRoots);
 
         // Relationship-on-relationship re-pointing onto kept relationships (collapse only).
-        // ponytail: not re-checked for new parallels; add that if anyone hits it.
         List<IArchimateRelationship> relRepoint = new ArrayList<>();
         for (IArchimateRelationship rel : rels) {
             if (!keptOf.containsKey(rel)
@@ -294,20 +290,15 @@ public class MergeElementsTool implements ITool {
                 public void execute() {
                     removal.execute();
                     moveFrom.keySet().forEach(k -> k.setArchimateRelationship(keptOf.get(moveFrom.get(k))));
-                    for (IArchimateRelationship rel : relRepoint) {
-                        IArchimateConcept[] e = ends.get(rel);
-                        rel.setSource(keptOf.containsKey(e[0]) ? keptOf.get(e[0]) : e[0]);
-                        rel.setTarget(keptOf.containsKey(e[1]) ? keptOf.get(e[1]) : e[1]);
-                    }
                     removedFromFolders.clear();
                     for (EObject o : deletedRels) {
                         removeFromFolder(o);
                     }
-                    for (IArchimateRelationship rel : repointLive) {
-                        IArchimateConcept[] e = ends.get(rel);
-                        rel.setSource(after(e[0], dupSet, survivor));
-                        rel.setTarget(after(e[1], dupSet, survivor));
-                    }
+                    // Each final end once: duplicate -> survivor, collapsed -> kept.
+                    ends.forEach((rel, e) -> {
+                        rel.setSource(fin.apply(e[0]));
+                        rel.setTarget(fin.apply(e[1]));
+                    });
                     figures.keySet().forEach(f -> f.setArchimateElement(survivor));
                     diffs.forEach(Diff::apply);
                     for (IArchimateElement d : dups) {
@@ -329,12 +320,13 @@ public class MergeElementsTool implements ITool {
                     }
                     diffs.forEach(Diff::undo);
                     figures.forEach(IDiagramModelArchimateObject::setArchimateElement);
+                    moveFrom.forEach(IDiagramModelArchimateConnection::setArchimateRelationship);
+                    removal.undo();
+                    // Ends last, so nothing re-attached above can leave them re-synced.
                     ends.forEach((rel, e) -> {
                         rel.setSource(e[0]);
                         rel.setTarget(e[1]);
                     });
-                    moveFrom.forEach(IDiagramModelArchimateConnection::setArchimateRelationship);
-                    removal.undo();
                 }
             };
 
@@ -352,6 +344,48 @@ public class MergeElementsTool implements ITool {
     /** The end after the merge: a duplicate becomes the survivor. */
     private static IArchimateConcept after(IArchimateConcept end, Set<IArchimateConcept> dupSet, IArchimateElement survivor) {
         return dupSet.contains(end) ? survivor : end;
+    }
+
+    /**
+     * Parallel groups (FR-19): relationships with the same type, final ends and type-specific
+     * attributes, where at least one was touched (re-pointed) by the merge. Only touched ones are
+     * listed as parallel; untouched relationships are never collapsed. Kept: an untouched one, else
+     * the first duplicate's, else model order.
+     */
+    private static Map<IArchimateRelationship, List<IArchimateRelationship>> groups(List<IArchimateRelationship> rels,
+            Set<IArchimateRelationship> selfLoops, Set<IArchimateRelationship> touched,
+            java.util.function.UnaryOperator<IArchimateConcept> fin, List<IArchimateElement> dups) {
+        Map<List<Object>, List<IArchimateRelationship>> buckets = new LinkedHashMap<>();
+        for (IArchimateRelationship rel : rels) {
+            if (selfLoops.contains(rel)) {
+                continue;
+            }
+            Map<String, Object> attrs = new HashMap<>();
+            RelationshipAttributes.read(rel, attrs);
+            buckets.computeIfAbsent(Arrays.asList(rel.eClass(), fin.apply(rel.getSource()),
+                    fin.apply(rel.getTarget()), attrs), k -> new ArrayList<>()).add(rel);
+        }
+        Map<IArchimateRelationship, List<IArchimateRelationship>> groups = new LinkedHashMap<>();
+        for (List<IArchimateRelationship> bucket : buckets.values()) {
+            if (bucket.size() < 2 || bucket.stream().noneMatch(touched::contains)) {
+                continue;
+            }
+            List<IArchimateRelationship> byKeep = new ArrayList<>(bucket); // stable: ties stay in model order
+            byKeep.sort(java.util.Comparator.comparingInt(r -> {
+                if (!touched.contains(r)) {
+                    return -1;
+                }
+                int rank = dupRank(r, dups);
+                return rank < 0 ? dups.size() : rank;
+            }));
+            IArchimateRelationship kept = byKeep.get(0);
+            List<IArchimateRelationship> parallel = new ArrayList<>(bucket);
+            parallel.removeIf(r -> r == kept || !touched.contains(r));
+            if (!parallel.isEmpty()) {
+                groups.put(kept, parallel);
+            }
+        }
+        return groups;
     }
 
     /** Index in duplicate_ids of the first duplicate at either end of a re-pointed relationship. */
@@ -509,6 +543,9 @@ public class MergeElementsTool implements ITool {
             }
             if (!conflictPaths.contains(field)) {
                 return prefix + field;
+            }
+            if (!value.isTextual()) {
+                throw new Exception("resolve." + prefix + field + " must be a string");
             }
             texts.put(field, value.asText());
             pending.remove(field);

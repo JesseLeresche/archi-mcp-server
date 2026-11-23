@@ -380,7 +380,9 @@ A value only one side has is not a conflict. It is filled in automatically.
   attributes are `access_type` (Access), `influence_strength` (Influence) and `directed`
   (Association), compared through the attribute helper from the query-relationships spec.
   Relationships that are parallel are grouped. Every group contains at least one relationship
-  that was re-pointed.
+  that was re-pointed. Merge never touches a relationship it did not re-point: a group's
+  `parallel` list holds only re-pointed relationships, so relationships that were already
+  parallel before the merge are neither listed nor collapsed.
   Each group has one **kept** relationship, chosen in this order:
   1. the relationship that was not re-pointed, if there is one;
   2. otherwise, the relationship of the duplicate that comes first in `duplicate_ids`;
