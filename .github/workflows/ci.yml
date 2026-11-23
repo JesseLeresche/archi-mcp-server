@@ -8,9 +8,6 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch: {}
 
-env:
-  ARCHI_VERSION: '5.10.0'
-
 # A push to a branch with an open PR fires both `push` and `pull_request:synchronize`
 # for the same commit, which would otherwise run this workflow twice. Group by the
 # commit SHA so the second run cancels the first. `github.sha` on a `pull_request`
@@ -43,20 +40,28 @@ jobs:
       # (documented in the README) is not actually wired to anything — confirmed by
       # testing locally — so the checked-out target file's path is rewritten directly
       # here instead, in this job's own checkout only. Never committed back.
-      - name: Download and extract Archi ${{ env.ARCHI_VERSION }} (Linux)
+      - name: Download and extract the latest Archi (Linux)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # archi.io release tags don't reliably match ARCHI_VERSION with dots
-          # swapped for underscores (they've been renamed 5_10_0 -> 5.10_0
-          # between runs) and the repo only keeps the latest release anyway,
-          # so resolve the tag from the API instead of guessing its format.
+          # archi.io keeps only its latest release (older versions 404, and
+          # archimatetool.com doesn't host them either), and its tag format
+          # changes between releases. So take the Linux64 asset of whatever
+          # the latest release is, and read the version from its file name.
           # Authenticated to avoid the unauthenticated API rate limit shared
           # by all GitHub Actions runner IPs.
-          ARCHI_TAG="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
-            https://api.github.com/repos/archimatetool/archi.io/releases/latest | jq -r .tag_name)"
-          curl -fsSL -o archi.tgz \
-            "https://github.com/archimatetool/archi.io/releases/download/${ARCHI_TAG}/Archi-Linux64-${ARCHI_VERSION}.tgz"
+          ASSET_URL="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/archimatetool/archi.io/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^Archi-Linux64-.*\\.tgz$")) | .browser_download_url')"
+          if [ -z "$ASSET_URL" ]; then
+            echo "No Archi-Linux64-*.tgz asset in the latest archi.io release" >&2
+            exit 1
+          fi
+          ARCHI_VERSION="$(basename "$ASSET_URL" .tgz)"
+          ARCHI_VERSION="${ARCHI_VERSION#Archi-Linux64-}"
+          echo "Archi ${ARCHI_VERSION}: ${ASSET_URL}"
+          echo "ARCHI_VERSION=$ARCHI_VERSION" >> "$GITHUB_ENV"
+          curl -fsSL -o archi.tgz "$ASSET_URL"
           mkdir -p "$RUNNER_TEMP/archi"
           tar -xzf archi.tgz -C "$RUNNER_TEMP/archi"
           ARCHI_DIR="$(dirname "$(find "$RUNNER_TEMP/archi" -maxdepth 3 -type d -name plugins | head -n1)")"
@@ -89,4 +94,4 @@ jobs:
         run: bash scripts/setup-target-platform.sh "$ARCHI_DIR"
 
       - name: Build
-        run: mvn -B clean verify
+        run: mvn -B clean verify -Darchi.dir="$ARCHI_DIR"

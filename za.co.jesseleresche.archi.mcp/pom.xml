@@ -64,6 +64,8 @@
                             <target>
                                 <pathconvert property="archi.test.cp" pathsep=",">
                                     <fileset dir="${archi.dir}/plugins" includes="com.archimatetool.*/*.jar"/>
+                                    <!-- lib/ is downloaded after Tycho fixes the classpath, so a fresh checkout (CI) would miss it -->
+                                    <fileset dir="${project.basedir}/lib" includes="*.jar"/>
                                 </pathconvert>
                             </target>
                         </configuration>
